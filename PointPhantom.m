@@ -6,10 +6,10 @@
 %
 %%
 
-function Phantom = SimplePhantom(points);
+function Phantom = SimplePhantom(points, ampl);
 % Define fantom
   % input:  points : matrix with phantom postitons [x y z]
   
 Phantom.positions = points;
-Phantom.amplitudes = ones(size(points,1));
+Phantom.amplitudes = ones(size(points, ampl));
   
