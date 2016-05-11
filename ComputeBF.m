@@ -5,7 +5,8 @@ dl = 5/100; % Diagonal loading
 sbl = P.Rx.no_elements/2; % Subarray length (48)
 dofb = true; % Do forward-backward averaging
 % nsd = ceil(rad2deg(P.Tx.Theta(end))); % Number of subdimensions (to compute V)
-nsd = 25; % Number of subdimensions (to compute V)
+nsd = 30; % Number of subdimensions (to compute V)
+% nsd = 25; % Number of subdimensions (to compute V)
 dataCube = permute(BFData,[2,1,3]);
 V = getSimpleBeamspace(P.Rx.no_elements,nsd);
 if bf_method == 1 %  MV
@@ -34,7 +35,7 @@ elseif bf_method == 4 % IAA 500 pts
     bf_im = IAAImageAmp(:,:,10);
 %     bf_im = 20*log10(abs(IAAImageAmp(:,:,10)));
 else % DAS
-    bf_im = mean(BFData,3);
+    bf_im = mean(BFData,3).';
 %     bf_im = 20*log10(abs(mean(BFData,3))).'; % sum of weights equal to one'
 end
 

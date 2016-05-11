@@ -111,7 +111,7 @@ function P = Parameters(NTheta)
   P.Tx.Theta = asin(P.Tx.SinTheta);
   
   
-  P.Tx.FocRad   = 40e-3;    % Focal radius
+  P.Tx.FocRad   = 50e-3;    % Focal radius
   P.Rx.NoMLA    = 1;        % No of Rx-lines per Tx-line 
   P.Rx.DeltaTh  = 0;        % Rx-offset relative to Tx-line [rad]
   P.MinRadImage = 35e-3;     % Minimum radius for which data is recorded [m]

@@ -1,6 +1,204 @@
 %% 2.2: Motion between beams
 addpath '/uio/hume/student-u04/cyrila/Documents/MATLAB/MasterThesis/Field_II_ver_3_24' -end
 
+save_all_data = true; %Can take multiple GB of memory
+grayscale_plots = true;
+
+bfm = [0,1,3,4]; % 0=DAS, 1=MV, 2=MV-Multibeam, 3=IAA, 4=IAA_500pts
+methods_set = {'DAS','MV','IAA','IAA 500pts'}; %Must correspond to bfm
+
+disable_multiprocess = false; % Must disable automatic creation of 
+% parallel pool for parfor (in parallel preferences).
+if disable_multiprocess
+    pool = struct; pool.NumWorkers = 1;
+else
+    if isempty(gcp('nocreate'))
+        parpool;
+    end
+    pool = gcp;
+end
+
+%% 1. Create Speckle raw data
+fprintf('Initializing Field II for all workers.\n')
+field_init(0);
+parfor w=1:pool.NumWorkers
+    field_init(0);
+end
+fprintf('\n============================================================\n')
+
+create_speckle = true;
+if create_speckle && exist('speckle_raw', 'var') ~= 1
+    save_speckle = true;
+    fprintf('Creating raw speckle image. This can take hours if many points.\n')
+    P = Parameters();
+    P.Seed = 42;
+    P.NumPoints = 10^6;
+    speckle_phantom = PlanewaveVesselPhantom(P, 0, P.NumPoints, P.Seed);
+    speckle_raw = CalcRespAll(P, speckle_phantom);
+    
+    if save_speckle
+        fprintf('\nNSaving speckle raw data to file.')
+        save -v7.3 2_1_speckle.mat P speckle_raw speckle_phantom;
+    end
+end
+fprintf('\n============================================================\n')
+
+add_speckle = true;
+if exist('speckle_raw', 'var') ~= 1
+    P = Parameters();
+    add_speckle = false;
+    speckle_raw = [];
+end
+
+%% 2. Create raw and DA(S) data with point scatterers
+if exist('data_DA', 'var') ~= 1
+    fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
+    shift_type = ShiftType.RadialVar;
+    shift_type.num_shifts = 4;
+    shift_type.shift = 1/2;
+    num_beams = 61:10:71;
+    
+    pts_theta = [0]; % Add a theta (in degrees) for each point
+    pts_range = [P.Tx.FocRad]; % Add a range (in m) for each point
+    scat_pts = zeros([length(pts_theta) 3]);
+    for pidx = 1:length(pts_theta)
+        pt = [sind(pts_theta(pidx)) 0 cosd(pts_theta(pidx))] ...
+            * pts_range(pidx);
+        scat_pts(pidx, :) = pt;
+    end
+    original_phantom = PointPhantom(scat_pts, 1+db2mag(20));
+    % -> pts 20dB over speckle
+    
+    data_phantoms = cell([1, length(num_beams)]);
+%     data_raw = cell([1, length(num_beams)]);
+    data_DA = cell([1, length(num_beams)]);
+    
+            s_phantom = shift_type.shiftPositions(original_phantom, shifts(s));
+            b_phantoms{s} = s_phantom;
+            s_raw = CalcRespAll(Pb, s_phantom);
+            if add_speckle
+                img = speckle_raw.image;
+                % Assumes scatterers in speckle -> s_raw.image smaller than img.
+                img(1:size(s_raw.image, 1),:) = img(1:size(s_raw.image, 1),:) + s_raw.image;
+                s_raw.image = img;
+            end
+    parfor b=1:length(num_beams)
+        b_DA = cell([1, num_beams(b)]);
+        
+        Pb = copyStruct(P);
+        Pb.Tx.NTheta = num_beams(b);
+        Pb.Tx.SinTheta = sin_thetas(b);
+        Pb.Tx.Theta = asin(Pb.Tx.SinTheta);
+        shifts = shift_type.getShifts(Pb);
+        sin_thetas = linspace(-P.Tx.SinThMax,P.Tx.SinThMax, num_beams(n));
+        fprintf('\nNTheta: %d.\n', P.Tx.NTheta)
+        nstart = tic;
+        for n=1:num_beams(n)
+            Pb = copyStruct(P);
+            Pb.Tx.NTheta = 1;
+            Pb.Tx.SinTheta = sin_thetas(b);
+            Pb.Tx.Theta = asin(Pb.Tx.SinTheta);
+            
+            s_phantom = shift_type.shiftPositions(original_phantom, shifts(n));
+            s = ceil(b / num_beams(n) * num_shifts);
+            b_DA{b} = BeamformAll(Pb, data_raw{s});
+        end
+        n_DA = b_DA{1};
+        for b=1:num_beams(n)
+            radius_length = length(b_DA{b}.Radius); % This number may vary
+            if length(n_DA.Radius) > radius_length
+                n_DA.image = n_DA.image(:,1:radius_length,:);
+                n_DA.Radius = b_DA{b}.Radius;
+            elseif radius_length > length(n_DA.Radius)
+                b_DA{b}.image = b_DA{b}.image(:,1:length(n_DA.Radius),:);
+            end
+            n_DA.image = vertcat(n_DA.image, b_DA{b}.image);
+        end
+        data_DA{n} = n_DA;
+    end
+    if save_data
+        fprintf('\nNSaving DA data to file. ')
+        save -v7.3 -append 2_2_all_data.mat num_beams data_DA;
+    end
+    for b=1:length(num_beams)
+        Pb = copyStruct(P);
+        Pb.Tx.NTheta = num_beams(b);
+        Pb.Tx.SinTheta = linspace(-Pb.Tx.SinThMax, Pb.Tx.SinThMax, Pb.Tx.NTheta);
+        Pb.Tx.Theta = asin(Pb.Tx.SinTheta);
+        fprintf('\nNTheta: %d.\n', Pb.Tx.NTheta)
+        nstart = tic;
+        
+        b_phantoms = cell([1, shift_type.num_shifts]);
+%         b_raw = cell([1, shift_type.num_shifts]);
+        b_DA = cell([1, shift_type.num_shifts]);
+        shifts = shift_type.getShifts(Pb);
+        parfor s=1:shift_type.num_shifts
+            s_phantom = shift_type.shiftPositions(original_phantom, shifts(s));
+            b_phantoms{s} = s_phantom;
+            s_raw = CalcRespAll(Pb, s_phantom);
+            if add_speckle
+                img = speckle_raw.image;
+                % Assumes scatterers in speckle -> s_raw.image smaller than img.
+                img(1:size(s_raw.image, 1),:) = img(1:size(s_raw.image, 1),:) + s_raw.image;
+                s_raw.image = img;
+            end
+%             b_raw{s} = s_raw;
+            b_DA{s} = BeamformAll(Pb, s_raw);
+        end
+        data_DA{b} = b_DA;
+        data_phantoms{b} = b_phantoms;
+        nend = toc(nstart);
+        fprintf('Time: %d minutes and %f seconds\b', floor(nend/60), rem(nend,60))
+    end
+    if save_all_data
+        fprintf('\nNSaving DA(S) data to file.')
+        save -v7.3 2_1_all_data.mat shift_type num_beams data_phantoms data_DA;
+    end
+end
+field_end();
+parfor w=1:pool.NumWorkers
+    field_end();
+end
+fprintf('\n============================================================\n')
+
+%% 3. Beamform data: DAS, MV, IAA
+if exist('data_BF', 'var') ~= 1
+    fprintf('Beamforming all DA(S) images.\n')
+    data_BF = cell([1, length(bfm)]);
+    for m=1:length(bfm)
+        bf_method = bfm(m);
+        fprintf('----------------------\n')
+        fprintf('Beamforming method: %s.\n', methods_set{m})
+        mstart = tic;
+        
+        m_BF = cell([1, length(num_beams)]);
+        for b=1:length(num_beams)
+            Pb = copyStruct(P);
+            Pb.Tx.NTheta = num_beams(b);
+            Pb.Tx.SinTheta = linspace(-Pb.Tx.SinThMax,Pb.Tx.SinThMax,Pb.Tx.NTheta);
+            Pb.Tx.Theta = asin(Pb.Tx.SinTheta);
+            
+            b_DA = data_DA{b};
+            b_BF = cell([1, shift_type.num_shifts]);
+            parfor s=1:shift_type.num_shifts
+                b_BF{s} = ComputeBF(b_DA{s}.image, Pb, bf_method);
+            end
+            m_BF{b} = b_BF;
+        end
+        data_BF{m} = m_BF;
+        mend = toc(mstart);
+        fprintf('%s: %d minutes and %f seconds\n', methods_set{m}, ...
+            floor(mend/60), rem(mend,60))
+    end
+    if save_all_data
+        fprintf('\nNSaving beamformed data to file.')
+        save -v7.3 -append 2_1_all_data.mat data_BF;
+    end
+end
+fprintf('\n============================================================\n')
+%% 2.2: Motion between beams
+addpath '/uio/hume/student-u04/cyrila/Documents/MATLAB/MasterThesis/Field_II_ver_3_24' -end
+
 
 save_raw_data = false;
 save_all_data = save_raw_data && false; %Can take multiple GB of memory
@@ -104,15 +302,15 @@ if exist('data_DA', 'var') ~= 1
     parfor n=1:length(num_beams)
         b_DA = cell([1, num_beams(n)]);
         sin_thetas = linspace(-P.Tx.SinThMax,P.Tx.SinThMax, num_beams(n));
-        fprintf('\nNTheta: %d.\n', Pn.Tx.NTheta)
+        fprintf('\nNTheta: %d.\n', Pb.Tx.NTheta)
         nstart = tic;
         for b=1:num_beams(n)
-            Pn = copyStruct(P);
-            Pn.Tx.NTheta = 1;
-            Pn.Tx.SinTheta = sin_thetas(b);
-            Pn.Tx.Theta = asin(Pn.Tx.SinTheta);
+            Pb = copyStruct(P);
+            Pb.Tx.NTheta = 1;
+            Pb.Tx.SinTheta = sin_thetas(b);
+            Pb.Tx.Theta = asin(Pb.Tx.SinTheta);
             s = ceil(b / num_beams(n) * num_shifts);
-            b_DA{b} = BeamformAll(Pn, data_raw{s});
+            b_DA{b} = BeamformAll(Pb, data_raw{s});
         end
         n_DA = b_DA{1};
         for b=1:num_beams(n)
@@ -149,11 +347,11 @@ if exist('data_BF', 'var') ~= 1
         
         m_BF = cell([1, length(num_beams)]);
         parfor n=1:length(num_beams)
-            Pn = copyStruct(P);
-            Pn.Tx.NTheta = num_beams(n);
-            Pn.Tx.SinTheta = linspace(-Pn.Tx.SinThMax,Pn.Tx.SinThMax,Pn.Tx.NTheta);
-            Pn.Tx.Theta = asin(Pn.Tx.SinTheta);
-            n_BF = ComputeBF(data_DA{n}.image, Pn, bf_method);
+            Pb = copyStruct(P);
+            Pb.Tx.NTheta = num_beams(n);
+            Pb.Tx.SinTheta = linspace(-Pb.Tx.SinThMax,Pb.Tx.SinThMax,Pb.Tx.NTheta);
+            Pb.Tx.Theta = asin(Pb.Tx.SinTheta);
+            n_BF = ComputeBF(data_DA{n}.image, Pb, bf_method);
         end
         data_BF{m} = m_BF;
         mend = toc(mstart);
@@ -172,12 +370,12 @@ figure;
 for m=1:length(methods_set)
     m_BF = data_BF{m};
     for n=1:length(num_beams)
-        Pn = copyStruct(P);
-        Pn.Tx.NTheta = num_beams(n);
-        Pn.Tx.SinTheta = linspace(-Pn.Tx.SinThMax,Pn.Tx.SinThMax,Pn.Tx.NTheta);
-        Pn.Tx.Theta = asin(Pn.Tx.SinTheta);
+        Pb = copyStruct(P);
+        Pb.Tx.NTheta = num_beams(n);
+        Pb.Tx.SinTheta = linspace(-Pb.Tx.SinThMax,Pb.Tx.SinThMax,Pb.Tx.NTheta);
+        Pb.Tx.Theta = asin(Pb.Tx.SinTheta);
 
-        imagesc(rad2deg(Pn.Tx.Theta),1e3 * data_DA{n}.Radius, m_BF{n});
+        imagesc(rad2deg(Pb.Tx.Theta),1e3 * data_DA{n}.Radius, m_BF{n});
 
         caxis([-130  -70]);
         xlim([-15 15])
