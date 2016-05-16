@@ -1,7 +1,6 @@
 %% 2.1: Motion between frames
 addpath '/uio/hume/student-u04/cyrila/Documents/MATLAB/MasterThesis/Field_II_ver_3_24' -end
-
-load 2_1_speckle.mat %TODO: remove
+% addpath 'C:\Users\Cyril\Documents\MATLAB\Field_II_ver_3_24' -end
 
 save_all_data = true; % Can take multiple GB of memory
 enable_plots = false;
@@ -59,7 +58,7 @@ if exist('data_DA', 'var') ~= 1
     shift_type = ShiftType.RadialVar;
     shift_type.num_shifts = 4;
     shift_type.shift = 1/2;
-    num_beams = 61:211;
+    num_beams = 61:10:211;
     
     pts_theta = [0]; % Add a theta (in degrees) for each point
     pts_range = [P.Tx.FocRad]; % Add a range (in m) for each point
