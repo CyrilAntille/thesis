@@ -11,36 +11,37 @@ methods_set = {'DAS','MV','IAA','IAA 500pts'}; % Must correspond to bfm
 
 disable_multiprocess = false; % Must disable automatic creation of 
 % parallel pool for parfor (in parallel preferences).
-if disable_multiprocess
-    pool = struct; pool.NumWorkers = 1;
-else
-    if isempty(gcp('nocreate'))
-        parpool;
-    end
-    pool = gcp;
-end
+
+%% 0. Load data
+% If raw/DA/BF data exists, the script won't recreate the data.
+% -> Can just load data from file if available
+
+% load 2_1_speckle.mat % Loads raw speckle data
+% bf_data_files = {'2_1_61_71.mat', '2_1_81_91.mat'};
+% [ shift_type, num_beams, data_phantoms, data_DA, data_BF ] ...
+%     = mergeData(bf_data_files, false); % Loads and merges DA(S) (and BF) data
+% shift_type.shift = 0.5;
+% shift_type.num_shifts = 2;
+% Note: For now shift_type properties values are not saved (MATLAB bug)
 
 %% 1. Create Speckle raw data
-fprintf('Initializing Field II for all workers.\n')
 field_init(0);
-parfor w=1:pool.NumWorkers
-    field_init(0);
-end
-fprintf('\n============================================================\n')
 
-create_speckle = true;
+create_speckle = false; 
 if create_speckle && exist('speckle_raw', 'var') ~= 1
     save_speckle = true;
-    fprintf('Creating raw speckle image. This can take hours if many points.\n')
+    fprintf('Creating raw speckle image. This can take many hours if many points.\n')
     P = Parameters();
-    P.Seed = 42;
+    P.Seed = 2;
     P.NumPoints = 10^6;
     speckle_phantom = PlanewaveVesselPhantom(P, 0, P.NumPoints, P.Seed);
     speckle_raw = CalcRespAll(P, speckle_phantom);
     
     if save_speckle
+        output_file = ['2_1_speckle_' num2str(P.Seed) '_10-' ...
+            num2str(log10(P.NumPoints)) '.mat'];
         fprintf('\nNSaving speckle raw data to file.')
-        save -v7.3 2_1_speckle.mat P speckle_raw speckle_phantom;
+        save(output_file, 'P', 'speckle_raw', 'speckle_phantom', '-v7.3')
     end
 end
 fprintf('\n============================================================\n')
@@ -52,13 +53,27 @@ if exist('speckle_raw', 'var') ~= 1
     speckle_raw = [];
 end
 
+fprintf('Initializing Field II for all workers.\n')
+if disable_multiprocess
+    pool = struct; pool.NumWorkers = 1;
+else
+    if isempty(gcp('nocreate'))
+        parpool;
+    end
+    pool = gcp;
+end
+parfor w=1:pool.NumWorkers
+    field_init(0);
+end
+fprintf('\n============================================================\n')
+
 %% 2. Create raw and DA(S) data with point scatterers
 if exist('data_DA', 'var') ~= 1
     fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
     shift_type = ShiftType.RadialVar;
     shift_type.num_shifts = 4;
     shift_type.shift = 1/2;
-    num_beams = 61:10:211;
+    num_beams = 81:10:91;
     
     pts_theta = [0]; % Add a theta (in degrees) for each point
     pts_range = [P.Tx.FocRad]; % Add a range (in m) for each point
@@ -102,8 +117,11 @@ if exist('data_DA', 'var') ~= 1
         fprintf('Time: %d minutes and %f seconds\b', floor(nend/60), rem(nend,60))
     end
     if save_all_data
+        output_file = ['2_1_' num2str(num_beams(1)) '_' ...
+            num2str(num_beams(end)) '.mat'];
         fprintf('\nNSaving DA(S) data to file.')
-        save -v7.3 2_1_all_data.mat shift_type num_beams data_phantoms data_DA;
+        save(output_file, 'shift_type', 'num_beams', 'data_phantoms', ...
+            'data_DA', '-v7.3')
     end
 end
 field_end();
@@ -142,8 +160,10 @@ if exist('data_BF', 'var') ~= 1
             floor(mend/60), rem(mend,60))
     end
     if save_all_data
+        output_file = ['2_1_' num2str(num_beams(1)) '_' ...
+            num2str(num_beams(end)) '.mat'];
         fprintf('\nNSaving beamformed data to file.')
-        save -append 2_1_all_data.mat data_BF;
+        save(output_file, 'data_BF', '-append')
     end
 end
 fprintf('\n============================================================\n')
@@ -182,8 +202,6 @@ for m=1:length(methods_set)
                 s_pts(p) = Inf;
                 if pt < thetaRange(1) || pt > thetaRange(end) || ...
                         pr < radiusRange(1) || pr > radiusRange(end)
-%                 if pt < deg2rad(-14) || pt > deg2rad(14) || ...
-%                         pr < 36/1000 || pr > 74/1000
                     continue;
                 end
                 [~, tidx] = min(abs(pt-thetaRange));
@@ -282,35 +300,32 @@ if enable_plots
                 if strcmp(methods_set(m),'IAA 500pts')
                     thetaRange = linspace(Pb.Tx.Theta(1), Pb.Tx.Theta(end), 500);
                 end
-    %             warning('off')
-    %             [scanConvertedImage, Xs, Zs] = getScanConvertedImage(s_BF, ...
-    %                 thetaRange, 1e3 * s_DA.Radius, 2024, 2024, 'spline');
-    %             warning('on')
-    %             img = scanConvertedImage./max(scanConvertedImage(:));
-    %             img = db(abs(img));
-    %             imagesc(Xs, Zs, img)
+                warning('off')
+                [scanConvertedImage, Xs, Zs] = getScanConvertedImage(s_BF, ...
+                    thetaRange, 1e3 * s_DA.Radius, 2024, 2024, 'spline');
+                warning('on')
+                img = scanConvertedImage./max(scanConvertedImage(:));
+                img = db(abs(img));
+                imagesc(Xs, Zs, img)
+                caxis([-60 0]) %TODO: See if remove normalization of image
+                xlabel('azimuth [mm]');
 
-                imagesc(rad2deg(thetaRange),1e3 * s_DA.Radius, db(abs(s_BF)));
-
-                caxis([-130  -70]);
-    %             caxis([-60 0])
-    %             xlim([-15 15])
-    %             ylim([35 45])
+%                 imagesc(rad2deg(thetaRange),1e3 * s_DA.Radius, db(abs(s_BF)));
+%                 caxis([-130  -70]);
+%                 xlim([-15 15])
+%                 ylim([35 45])
+%                 xlabel('angle [deg]');
 
                 colorbar
                 if grayscale_plots
                     colormap(gray)
-    %                 colormap(flipud(colormap))
                 else 
                     colormap(jet)
                 end 
                 ylabel('range [mm]');
-                xlabel('angle [deg]');
                 title(['Method :', methods_set{m}, ', No Beams: ', ...
                     int2str(num_beams(b)), ', Shift No: ', int2str(s-1)])
-                if m >= 3
-                    pause
-                end
+                pause
             end
         end
     end

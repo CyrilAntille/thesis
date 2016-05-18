@@ -1,7 +1,9 @@
 %% 2.2: Motion between beams
 addpath '/uio/hume/student-u04/cyrila/Documents/MATLAB/MasterThesis/Field_II_ver_3_24' -end
+% addpath 'C:\Users\Cyril\Documents\MATLAB\Field_II_ver_3_24' -end
 
-save_all_data = true; %Can take multiple GB of memory
+save_all_data = false; % Can take multiple GB of memory
+enable_plots = false;
 grayscale_plots = true;
 
 bfm = [0,1,3,4]; % 0=DAS, 1=MV, 2=MV-Multibeam, 3=IAA, 4=IAA_500pts
@@ -9,36 +11,34 @@ methods_set = {'DAS','MV','IAA','IAA 500pts'}; %Must correspond to bfm
 
 disable_multiprocess = false; % Must disable automatic creation of 
 % parallel pool for parfor (in parallel preferences).
-if disable_multiprocess
-    pool = struct; pool.NumWorkers = 1;
-else
-    if isempty(gcp('nocreate'))
-        parpool;
-    end
-    pool = gcp;
-end
+
+%% 0. Load data
+% If raw/DA/BF data exists, the script won't recreate the data.
+% -> Can just load data from file if available
+
+% load 2_1_speckle.mat % Loads raw speckle data
+% bf_data_files = {'2_1_61_91.mat', '2_1_101_131.mat'};
+% [ shift_type, num_beams, data_phantoms, data_DA, data_BF ] ...
+%     = mergeData(bf_data_files, false); % Loads and merges DA(S) (and BF) data
 
 %% 1. Create Speckle raw data
-fprintf('Initializing Field II for all workers.\n')
 field_init(0);
-parfor w=1:pool.NumWorkers
-    field_init(0);
-end
-fprintf('\n============================================================\n')
 
-create_speckle = true;
+create_speckle = true; 
 if create_speckle && exist('speckle_raw', 'var') ~= 1
     save_speckle = true;
     fprintf('Creating raw speckle image. This can take hours if many points.\n')
     P = Parameters();
-    P.Seed = 42;
+    P.Seed = 2;
     P.NumPoints = 10^6;
     speckle_phantom = PlanewaveVesselPhantom(P, 0, P.NumPoints, P.Seed);
     speckle_raw = CalcRespAll(P, speckle_phantom);
     
     if save_speckle
+        output_file = ['2_1_speckle_' num2str(P.Seed) '_10-' ...
+            num2str(log10(P.NumPoints)) '.mat'];
         fprintf('\nNSaving speckle raw data to file.')
-        save -v7.3 2_1_speckle.mat P speckle_raw speckle_phantom;
+        save(output_file, 'P', 'speckle_raw', 'speckle_phantom', '-v7.3')
     end
 end
 fprintf('\n============================================================\n')
@@ -49,6 +49,20 @@ if exist('speckle_raw', 'var') ~= 1
     add_speckle = false;
     speckle_raw = [];
 end
+
+fprintf('Initializing Field II for all workers.\n')
+if disable_multiprocess
+    pool = struct; pool.NumWorkers = 1;
+else
+    if isempty(gcp('nocreate'))
+        parpool;
+    end
+    pool = gcp;
+end
+parfor w=1:pool.NumWorkers
+    field_init(0);
+end
+fprintf('\n============================================================\n')
 
 %% 2. Create raw and DA(S) data with point scatterers
 if exist('data_DA', 'var') ~= 1
@@ -70,7 +84,6 @@ if exist('data_DA', 'var') ~= 1
     % -> pts 20dB over speckle
     
     data_phantoms = cell([1, length(num_beams)]);
-%     data_raw = cell([1, length(num_beams)]);
     data_DA = cell([1, length(num_beams)]);
     
             s_phantom = shift_type.shiftPositions(original_phantom, shifts(s));
@@ -129,7 +142,6 @@ if exist('data_DA', 'var') ~= 1
         nstart = tic;
         
         b_phantoms = cell([1, shift_type.num_shifts]);
-%         b_raw = cell([1, shift_type.num_shifts]);
         b_DA = cell([1, shift_type.num_shifts]);
         shifts = shift_type.getShifts(Pb);
         parfor s=1:shift_type.num_shifts
@@ -142,7 +154,6 @@ if exist('data_DA', 'var') ~= 1
                 img(1:size(s_raw.image, 1),:) = img(1:size(s_raw.image, 1),:) + s_raw.image;
                 s_raw.image = img;
             end
-%             b_raw{s} = s_raw;
             b_DA{s} = BeamformAll(Pb, s_raw);
         end
         data_DA{b} = b_DA;
