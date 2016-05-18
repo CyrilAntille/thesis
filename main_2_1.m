@@ -17,7 +17,8 @@ disable_multiprocess = false; % Must disable automatic creation of
 % -> Can just load data from file if available
 
 % load 2_1_speckle.mat % Loads raw speckle data
-% bf_data_files = {'2_1_61_71.mat', '2_1_81_91.mat'};
+% bf_data_files = {'2_1_61_91_noSpeckle.mat', '2_1_101_171_noSpeckle.mat', ...
+%     '2_1_181_211_noSpeckle.mat'};
 % [ shift, num_beams, data_phantoms, data_DA, data_BF ] ...
 %     = mergeData(bf_data_files, false); % Loads and merges DA(S) (and BF) data
 

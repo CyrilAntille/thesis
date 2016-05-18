@@ -1,4 +1,4 @@
-classdef ShiftType < handle
+classdef ShiftType
     %SHIFTTYPE Defines shift type
     enumeration
         LateralCst %in meters

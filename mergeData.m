@@ -10,17 +10,16 @@ all_BF = [];
 ref_shift = 0;
 for f=1:length(files)
     load(files{f})
-    if ref_shift == 0
+    if isequal(ref_shift, 0)
         all_beams = num_beams;
         all_phantoms = data_phantoms;
         all_DA = data_DA;
         if exist('data_BF', 'var')
             all_BF = data_BF;
         end
-        ref_shift = shift_type;
+        ref_shift = shift;
     else
-        if shift_type ~= ref_shift || shift_type.shift ~= ref_shift.shift ...
-                || shift_type.num_shifts ~= ref_shift.num_shifts
+        if ~isequal(ref_shift, shift)
             error('The variable shift_type differs between files!')
         end
         if num_beams(end) < all_beams(1)
@@ -52,8 +51,17 @@ if save_to_file
     output_file = ['2_1_' num2str(all_beams(1)) '_' ...
         num2str(all_beams(end)) '.mat'];
     fprintf('\nNSaving DA(S) data to file.')
-    save(output_file, 'shift_type', 'num_beams', 'data_phantoms', ...
+    shift = ref_shift;
+    num_beams = all_beams;
+    data_phantoms = all_phantoms;
+    data_DA = all_DA;
+    save(output_file, 'shift', 'num_beams', 'data_phantoms', ...
         'data_DA', '-v7.3')
+    
+    if exist('data_BF', 'var')
+        data_BF = all_BF;
+        save(output_file, 'data_BF', '-append')
+    end
 end
 end
 
