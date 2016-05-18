@@ -18,11 +18,8 @@ disable_multiprocess = false; % Must disable automatic creation of
 
 % load 2_1_speckle.mat % Loads raw speckle data
 % bf_data_files = {'2_1_61_71.mat', '2_1_81_91.mat'};
-% [ shift_type, num_beams, data_phantoms, data_DA, data_BF ] ...
+% [ shift, num_beams, data_phantoms, data_DA, data_BF ] ...
 %     = mergeData(bf_data_files, false); % Loads and merges DA(S) (and BF) data
-% shift_type.shift = 0.5;
-% shift_type.num_shifts = 2;
-% Note: For now shift_type properties values are not saved (MATLAB bug)
 
 %% 1. Create Speckle raw data
 field_init(0);
@@ -47,7 +44,7 @@ end
 fprintf('\n============================================================\n')
 
 add_speckle = true;
-if exist('speckle_raw', 'var') ~= 1
+if exist('speckle_raw', 'var') ~= 1 || isempty(speckle_raw)
     P = Parameters();
     add_speckle = false;
     speckle_raw = [];
@@ -70,10 +67,10 @@ fprintf('\n============================================================\n')
 %% 2. Create raw and DA(S) data with point scatterers
 if exist('data_DA', 'var') ~= 1
     fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
-    shift_type = ShiftType.RadialVar;
-    shift_type.num_shifts = 4;
-    shift_type.shift = 1/2;
-    num_beams = 81:10:91;
+    shift = Shift(ShiftType.RadialVar, 1/2, 2);
+    if exist('num_beams', 'var') ~= 1
+        num_beams = 61:10:91;
+    end
     
     pts_theta = [0]; % Add a theta (in degrees) for each point
     pts_range = [P.Tx.FocRad]; % Add a range (in m) for each point
@@ -88,7 +85,7 @@ if exist('data_DA', 'var') ~= 1
     
     data_phantoms = cell([1, length(num_beams)]);
     data_DA = cell([1, length(num_beams)]);
-    for b=1:length(num_beams)
+    parfor b=1:length(num_beams)
         Pb = copyStruct(P);
         Pb.Tx.NTheta = num_beams(b);
         Pb.Tx.SinTheta = linspace(-Pb.Tx.SinThMax, Pb.Tx.SinThMax, Pb.Tx.NTheta);
@@ -96,11 +93,11 @@ if exist('data_DA', 'var') ~= 1
         fprintf('\nNTheta: %d.\n', Pb.Tx.NTheta)
         nstart = tic;
         
-        b_phantoms = cell([1, shift_type.num_shifts]);
-        b_DA = cell([1, shift_type.num_shifts]);
-        shifts = shift_type.getShifts(Pb);
-        parfor s=1:shift_type.num_shifts
-            s_phantom = shift_type.shiftPositions(original_phantom, shifts(s));
+        b_phantoms = cell([1, shift.num_shifts]);
+        b_DA = cell([1, shift.num_shifts]);
+        shifts = shift.getShifts(Pb);
+        for s=1:shift.num_shifts
+            s_phantom = shift.shiftPositions(original_phantom, shifts(s));
             b_phantoms{s} = s_phantom;
             s_raw = CalcRespAll(Pb, s_phantom);
             if add_speckle
@@ -114,13 +111,18 @@ if exist('data_DA', 'var') ~= 1
         data_DA{b} = b_DA;
         data_phantoms{b} = b_phantoms;
         nend = toc(nstart);
-        fprintf('Time: %d minutes and %f seconds\b', floor(nend/60), rem(nend,60))
+        fprintf('\nNTheta: %d. Time: %d minutes and %f seconds', ...
+            Pb.Tx.NTheta, floor(nend/60), rem(nend,60))
     end
     if save_all_data
+        speckle_name = '_noSpeckle';
+        if add_speckle
+            speckle_name = ['_speckle' num2str(P.Seed)];
+        end
         output_file = ['2_1_' num2str(num_beams(1)) '_' ...
-            num2str(num_beams(end)) '.mat'];
+            num2str(num_beams(end)) speckle_name '.mat'];
         fprintf('\nNSaving DA(S) data to file.')
-        save(output_file, 'shift_type', 'num_beams', 'data_phantoms', ...
+        save(output_file, 'shift', 'num_beams', 'data_phantoms', ...
             'data_DA', '-v7.3')
     end
 end
@@ -141,15 +143,15 @@ if exist('data_BF', 'var') ~= 1
         mstart = tic;
         
         m_BF = cell([1, length(num_beams)]);
-        for b=1:length(num_beams)
+        parfor b=1:length(num_beams)
             Pb = copyStruct(P);
             Pb.Tx.NTheta = num_beams(b);
             Pb.Tx.SinTheta = linspace(-Pb.Tx.SinThMax,Pb.Tx.SinThMax,Pb.Tx.NTheta);
             Pb.Tx.Theta = asin(Pb.Tx.SinTheta);
             
             b_DA = data_DA{b};
-            b_BF = cell([1, shift_type.num_shifts]);
-            parfor s=1:shift_type.num_shifts
+            b_BF = cell([1, shift.num_shifts]);
+            for s=1:shift.num_shifts
                 b_BF{s} = ComputeBF(b_DA{s}.image, Pb, bf_method);
             end
             m_BF{b} = b_BF;
@@ -160,8 +162,12 @@ if exist('data_BF', 'var') ~= 1
             floor(mend/60), rem(mend,60))
     end
     if save_all_data
+        speckle_name = '_noSpeckle';
+        if add_speckle
+            speckle_name = ['_speckle' num2str(P.Seed)];
+        end
         output_file = ['2_1_' num2str(num_beams(1)) '_' ...
-            num2str(num_beams(end)) '.mat'];
+            num2str(num_beams(end)) speckle_name '.mat'];
         fprintf('\nNSaving beamformed data to file.')
         save(output_file, 'data_BF', '-append')
     end
@@ -169,7 +175,7 @@ end
 fprintf('\n============================================================\n')
 
 %% Estimate scalloping loss
-fprintf('Scalloping loss estimation and plotting\b')
+fprintf('Scalloping loss estimation and plotting\n')
 beam_max = zeros([length(methods_set) length(num_beams)]);
 beam_mean = zeros([length(methods_set) length(num_beams)]);
 
@@ -182,8 +188,8 @@ for m=1:length(methods_set)
         b_BF = m_BF{b};
         b_DA = data_DA{b};
         num_pts = size(data_phantoms{1}{1}.positions, 1);
-        pts_ampl = ones(shift_type.num_shifts, num_pts) * Inf;
-        for s=1:shift_type.num_shifts
+        pts_ampl = ones(shift.num_shifts, num_pts) * Inf;
+        for s=1:shift.num_shifts
             s_BF = b_BF{s};
             s_DA = b_DA{s};
             speckle_pts = data_phantoms{b}{s};
@@ -292,7 +298,7 @@ if enable_plots
 
             b_BF = m_BF{b};
             b_DA = data_DA{b};
-            for s=1:shift_type.num_shifts
+            for s=1:shift.num_shifts
                 s_BF = b_BF{s};
                 s_DA = b_DA{s};
 

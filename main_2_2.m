@@ -2,12 +2,12 @@
 addpath '/uio/hume/student-u04/cyrila/Documents/MATLAB/MasterThesis/Field_II_ver_3_24' -end
 % addpath 'C:\Users\Cyril\Documents\MATLAB\Field_II_ver_3_24' -end
 
-save_all_data = false; % Can take multiple GB of memory
+save_all_data = true; % Can take multiple GB of memory
 enable_plots = false;
 grayscale_plots = true;
 
 bfm = [0,1,3,4]; % 0=DAS, 1=MV, 2=MV-Multibeam, 3=IAA, 4=IAA_500pts
-methods_set = {'DAS','MV','IAA','IAA 500pts'}; %Must correspond to bfm
+methods_set = {'DAS','MV','IAA','IAA 500pts'}; % Must correspond to bfm
 
 disable_multiprocess = false; % Must disable automatic creation of 
 % parallel pool for parfor (in parallel preferences).
@@ -17,17 +17,17 @@ disable_multiprocess = false; % Must disable automatic creation of
 % -> Can just load data from file if available
 
 % load 2_1_speckle.mat % Loads raw speckle data
-% bf_data_files = {'2_1_61_91.mat', '2_1_101_131.mat'};
-% [ shift_type, num_beams, data_phantoms, data_DA, data_BF ] ...
+% bf_data_files = {'2_1_61_71.mat', '2_1_81_91.mat'};
+% [ shift, num_beams, data_phantoms, data_DA, data_BF ] ...
 %     = mergeData(bf_data_files, false); % Loads and merges DA(S) (and BF) data
 
 %% 1. Create Speckle raw data
 field_init(0);
 
-create_speckle = true; 
+create_speckle = false; 
 if create_speckle && exist('speckle_raw', 'var') ~= 1
     save_speckle = true;
-    fprintf('Creating raw speckle image. This can take hours if many points.\n')
+    fprintf('Creating raw speckle image. This can take many hours if many points.\n')
     P = Parameters();
     P.Seed = 2;
     P.NumPoints = 10^6;
@@ -44,7 +44,7 @@ end
 fprintf('\n============================================================\n')
 
 add_speckle = true;
-if exist('speckle_raw', 'var') ~= 1
+if exist('speckle_raw', 'var') ~= 1 || isempty(speckle_raw)
     P = Parameters();
     add_speckle = false;
     speckle_raw = [];
