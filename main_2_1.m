@@ -311,18 +311,16 @@ if enable_plots
                 [scanConvertedImage, Xs, Zs] = getScanConvertedImage(s_BF, ...
                     thetaRange, 1e3 * s_DA.Radius, 2024, 2024, 'spline');
                 warning('on')
-                img = scanConvertedImage./max(scanConvertedImage(:));
-                img = db(abs(img));
+                img = db(abs(scanConvertedImage));
                 imagesc(Xs, Zs, img)
-                caxis([-60 0]) %TODO: See if remove normalization of image
                 xlabel('azimuth [mm]');
 
 %                 imagesc(rad2deg(thetaRange),1e3 * s_DA.Radius, db(abs(s_BF)));
-%                 caxis([-130  -70]);
 %                 xlim([-15 15])
 %                 ylim([35 45])
 %                 xlabel('angle [deg]');
 
+                caxis([-130  -70]);
                 colorbar
                 if grayscale_plots
                     colormap(gray)
