@@ -1,10 +1,9 @@
 %% 2.2: Motion between beams
-% addpath '/uio/hume/student-u04/cyrila/Documents/MATLAB/MasterThesis/Field_II_ver_3_24' -end
-addpath 'C:\Users\Cyril\Documents\MATLAB\Field_II_ver_3_24' -end
+addpath '/uio/hume/student-u04/cyrila/Documents/MATLAB/MasterThesis/Field_II_ver_3_24' -end
+% addpath 'C:\Users\Cyril\Documents\MATLAB\Field_II_ver_3_24' -end
 
 save_all_data = false; % Can take multiple GB of memory
 enable_plots = true;
-grayscale_plots = true;
 
 bfm = [0,1,3,4]; % 0=DAS, 1=MV, 2=MV-Multibeam, 3=IAA, 4=IAA_500pts
 methods_set = {'DAS','MV','IAA','IAA 500pts'}; % Must correspond to bfm
@@ -45,10 +44,9 @@ end
 fprintf('\n============================================================\n')
 
 add_speckle = true;
-if exist('speckle_raw', 'var') ~= 1 || isempty(speckle_raw)
+if exist('speckle_raw', 'var') ~= 1
     P = Parameters();
     add_speckle = false;
-    speckle_raw = [];
 end
 
 fprintf('Initializing Field II for all workers.\n')
@@ -68,9 +66,9 @@ fprintf('\n============================================================\n')
 %% 2. Create raw and DA(S) data with point scatterers
 if exist('data_DA', 'var') ~= 1
     fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
-    shift = Shift(ShiftType.LateralCst, 0, -1);
+    shift = Shift(ShiftType.LateralCst, 5*1e-3 / 61, -1);
     if exist('num_beams', 'var') ~= 1
-        num_beams = 61:10:71;
+        num_beams = 61;
     end
     
     pts_theta = [0, 0]; % Add a theta (in degrees) for each point
@@ -86,7 +84,7 @@ if exist('data_DA', 'var') ~= 1
     
     data_phantoms = original_phantom;
     data_DA = cell([1, length(num_beams)]);
-    parfor b=1:length(num_beams)
+    for b=1:length(num_beams)
         Pb = copyStruct(P);
         Pb.Tx.NTheta = num_beams(b);
         Pb.Tx.SinTheta = linspace(-Pb.Tx.SinThMax, Pb.Tx.SinThMax, Pb.Tx.NTheta);
@@ -97,19 +95,14 @@ if exist('data_DA', 'var') ~= 1
         b_shift = Shift(shift.type, shift.val, Pb.Tx.NTheta);
         b_DA = cell([1, b_shift.num_shifts]);
         shifts = b_shift.getShifts(Pb);
-        for s=1:b_shift.num_shifts
+        beam_shift = Pb.Tx.SinTheta(2) - Pb.Tx.SinTheta(1);
+        parfor s=1:b_shift.num_shifts
             Ps = copyStruct(Pb);
             Ps.Tx.NTheta = 1;
-            Ps.Tx.SinTheta = - Pb.Tx.SinThMax + shifts(s);
+            Ps.Tx.SinTheta = - Pb.Tx.SinThMax + beam_shift * s;
             Ps.Tx.Theta = asin(Ps.Tx.SinTheta);
-            s_phantom = shift.shiftPositions(original_phantom, shifts(s));
+            s_phantom = b_shift.shiftPositions(original_phantom, shifts(s));
             s_raw = CalcRespAll(Ps, s_phantom);
-            if add_speckle
-                img = speckle_raw.image;
-                % Assumes scatterers in speckle -> s_raw.image smaller than img.
-                img(1:size(s_raw.image, 1),:) = img(1:size(s_raw.image, 1),:) + s_raw.image;
-                s_raw.image = img;
-            end
             b_DA{s} = BeamformAll(Ps, s_raw);
         end
         n_DA = b_DA{1};
@@ -123,6 +116,17 @@ if exist('data_DA', 'var') ~= 1
             end
             n_DA.image = vertcat(n_DA.image, b_DA{s}.image);
         end
+        
+        if add_speckle
+            speckle_DA = BeamformAll(Pb, speckle_raw);
+            tmp = speckle_DA.image;
+            tmp(1:size(n_DA.image,1), 1:size(n_DA.image,2),...
+                1:size(n_DA.image,3)) = tmp(1:size(n_DA.image,1), ...
+                1:size(n_DA.image,2), 1:size(n_DA.image,3)) + n_DA.image;
+            n_DA.image = tmp;
+            n_DA.Radius = speckle_DA.Radius;
+        end
+            
         data_DA{b} = n_DA;
         nend = toc(nstart);
         fprintf('\nNTheta: %d. Time: %d minutes and %f seconds', ...
@@ -211,17 +215,13 @@ if enable_plots
             xlabel('azimuth [mm]');
 
 %                 imagesc(rad2deg(thetaRange),1e3 * s_DA.Radius, db(abs(s_BF)));
+%                 xlabel('angle [deg]');
 %                 xlim([-15 15])
 %                 ylim([35 45])
-%                 xlabel('angle [deg]');
 
             caxis([-130  -70]);
             colorbar
-            if grayscale_plots
-                colormap(gray)
-            else 
-                colormap(jet)
-            end 
+            colormap(gray)
             ylabel('range [mm]');
             title(['Method :', methods_set{m}, ', No Beams: ', ...
                 int2str(num_beams(b))])

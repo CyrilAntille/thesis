@@ -44,11 +44,11 @@ if create_speckle && exist('speckle_raw', 'var') ~= 1
 end
 fprintf('\n============================================================\n')
 
-add_speckle = true;
-if exist('speckle_raw', 'var') ~= 1 || isempty(speckle_raw)
+if exist('speckle_raw', 'var') ~= 1
     P = Parameters();
-    add_speckle = false;
-    speckle_raw = [];
+    speckle_raw_image = [];
+else
+    speckle_raw_image = speckle_raw.image;
 end
 
 fprintf('Initializing Field II for all workers.\n')
@@ -101,9 +101,9 @@ if exist('data_DA', 'var') ~= 1
             s_phantom = shift.shiftPositions(original_phantom, shifts(s));
             b_phantoms{s} = s_phantom;
             s_raw = CalcRespAll(Pb, s_phantom);
-            if add_speckle
-                img = speckle_raw.image;
-                % Assumes scatterers in speckle -> s_raw.image smaller than img.
+            if ~isempty(speckle_raw_image)
+                img = speckle_raw_image;
+                % Assumes scatterers in speckle -> s_raw.image range smaller than img.
                 img(1:size(s_raw.image, 1),:) = img(1:size(s_raw.image, 1),:) + s_raw.image;
                 s_raw.image = img;
             end
@@ -322,11 +322,7 @@ if enable_plots
 
                 caxis([-130  -70]);
                 colorbar
-                if grayscale_plots
-                    colormap(gray)
-                else 
-                    colormap(jet)
-                end 
+                colormap(gray)
                 ylabel('range [mm]');
                 title(['Method :', methods_set{m}, ', No Beams: ', ...
                     int2str(num_beams(b)), ', Shift No: ', int2str(s-1)])
