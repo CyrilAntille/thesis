@@ -67,12 +67,16 @@ fprintf('\n============================================================\n')
 %% 2. Create raw and DA(S) data with point scatterers
 if exist('data_DA', 'var') ~= 1
     fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
-    shift = Shift(ShiftType.LateralCst, 5*1e-3 / 101, -1);
+%     shift = Shift(ShiftType.LateralCst, 5*1e-3 / 101, -1);
+    shift = Shift(ShiftType.LateralSpeed, 1, -1);
     if exist('num_beams', 'var') ~= 1
         num_beams = 101;
+%         num_beams = [71 111];
     end
     pts_theta = [0, 0]; % Add a theta (in degrees) for each point
     pts_range = [P.Tx.FocRad, 50*1e-3]; % Add a range (in m) for each point
+%     pts_theta = [0]; % Add a theta (in degrees) for each point
+%     pts_range = [P.Tx.FocRad]; % Add a range (in m) for each point
     scat_pts = zeros([length(pts_theta) 3]);
     for pidx = 1:length(pts_theta)
         pt = [sind(pts_theta(pidx)) 0 cosd(pts_theta(pidx))] ...
@@ -109,7 +113,7 @@ if exist('data_DA', 'var') ~= 1
             % DA(S)
             Ps = copyStruct(Pb);
             Ps.Tx.NTheta = 1;
-            Ps.Tx.SinTheta = - Pb.Tx.SinThMax + beam_shift * s;
+            Ps.Tx.SinTheta = - Pb.Tx.SinThMax + beam_shift * (s-1);
             Ps.Tx.Theta = asin(Ps.Tx.SinTheta);
             b_DA{s} = BeamformAll(Ps, s_raw);
         end
@@ -188,7 +192,7 @@ fprintf('\n============================================================\n')
 %% Plots
 if enable_plots
     % BF images
-    figure;
+    figure(1);
     for m=1:length(methods_set)
         m_BF = data_BF{m};
         for b=1:length(num_beams)
@@ -209,16 +213,46 @@ if enable_plots
                 thetaRange, 1e3 * b_DA.Radius, 2024, 2024, 'spline');
             warning('on')
             img = db(abs(scanConvertedImage));
-            max(img(:))
+            
+            % beampatterns - Assumes 2 points
+            bf_img = db(abs(b_BF));
+            separation = P.Tx.FocRad + 5  * 1e-3;
+            z_sep = find(b_DA.Radius >= separation, 1);
+            p1_bp = max(bf_img(1:z_sep, :) - max(bf_img(:)), [], 1);
+            p2_bp = max(bf_img(z_sep+1:end, :) - max(bf_img(:)), [], 1);
+            
+%             figure(3); 
+            subplot(1,2,2)
+            plot(rad2deg(thetaRange), p1_bp, 'b', ...
+                rad2deg(thetaRange), p2_bp, 'r', 'LineWidth', 2)
+            line([0 0],[-100 0]);
+            xlim([-15 15])
+            ylim([-50 0])
+            xlabel('angle [deg]');
+            ylabel('gain [dB]');
+
+            % Scatterer points dilation
+            impts = img > -85;
+            pts = bwconncomp(impts);
+%             figure(2); imagesc(impts)
+%             if pts.NumObjects ~= length(data_phantoms.amplitudes)
+%                 error('Binary image has more/less points than expected')
+%             end
+            for p=1:pts.NumObjects
+                p_area = length(pts.PixelIdxList{p});
+            end
+            
+%             figure(1);
+            subplot(1,2,1)
             imagesc(Xs, Zs, img)
             xlabel('azimuth [mm]');
 
-%             imagesc(rad2deg(thetaRange),1e3 * s_DA.Radius, db(abs(s_BF)));
+%             imagesc(rad2deg(thetaRange),1e3 * b_DA.Radius, db(abs(b_BF)));
 %             xlabel('angle [deg]');
             
             xlim([-15 15])
             ylim([34 52])
-            caxis([-130  -60]);
+            caxis([-130  -70]);
             colorbar
             colormap(gray)
             ylabel('range [mm]');
