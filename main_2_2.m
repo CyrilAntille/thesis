@@ -43,10 +43,11 @@ if create_speckle && exist('speckle_raw', 'var') ~= 1
 end
 fprintf('\n============================================================\n')
 
-add_speckle = true;
 if exist('speckle_raw', 'var') ~= 1
     P = Parameters();
-    add_speckle = false;
+    speckle_raw_image = [];
+else
+    speckle_raw_image = speckle_raw.image;
 end
 
 fprintf('Initializing Field II for all workers.\n')
@@ -66,11 +67,10 @@ fprintf('\n============================================================\n')
 %% 2. Create raw and DA(S) data with point scatterers
 if exist('data_DA', 'var') ~= 1
     fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
-    shift = Shift(ShiftType.LateralCst, 5*1e-3 / 61, -1);
+    shift = Shift(ShiftType.LateralCst, 5*1e-3 / 101, -1);
     if exist('num_beams', 'var') ~= 1
-        num_beams = 61;
+        num_beams = 101;
     end
-    
     pts_theta = [0, 0]; % Add a theta (in degrees) for each point
     pts_range = [P.Tx.FocRad, 50*1e-3]; % Add a range (in m) for each point
     scat_pts = zeros([length(pts_theta) 3]);
@@ -97,12 +97,20 @@ if exist('data_DA', 'var') ~= 1
         shifts = b_shift.getShifts(Pb);
         beam_shift = Pb.Tx.SinTheta(2) - Pb.Tx.SinTheta(1);
         parfor s=1:b_shift.num_shifts
+            % Raw
+            s_phantom = b_shift.shiftPositions(original_phantom, shifts(s));
+            s_raw = CalcRespAll(Pb, s_phantom);
+            if ~isempty(speckle_raw_image)
+                new_image = speckle_raw_image;
+                new_image(1:size(s_raw.image),:) = ...
+                    new_image(1:size(s_raw.image),:) + s_raw.image;
+                s_raw.image = new_image;
+            end
+            % DA(S)
             Ps = copyStruct(Pb);
             Ps.Tx.NTheta = 1;
             Ps.Tx.SinTheta = - Pb.Tx.SinThMax + beam_shift * s;
             Ps.Tx.Theta = asin(Ps.Tx.SinTheta);
-            s_phantom = b_shift.shiftPositions(original_phantom, shifts(s));
-            s_raw = CalcRespAll(Ps, s_phantom);
             b_DA{s} = BeamformAll(Ps, s_raw);
         end
         n_DA = b_DA{1};
@@ -117,16 +125,6 @@ if exist('data_DA', 'var') ~= 1
             n_DA.image = vertcat(n_DA.image, b_DA{s}.image);
         end
         
-        if add_speckle
-            speckle_DA = BeamformAll(Pb, speckle_raw);
-            tmp = speckle_DA.image;
-            tmp(1:size(n_DA.image,1), 1:size(n_DA.image,2),...
-                1:size(n_DA.image,3)) = tmp(1:size(n_DA.image,1), ...
-                1:size(n_DA.image,2), 1:size(n_DA.image,3)) + n_DA.image;
-            n_DA.image = tmp;
-            n_DA.Radius = speckle_DA.Radius;
-        end
-            
         data_DA{b} = n_DA;
         nend = toc(nstart);
         fprintf('\nNTheta: %d. Time: %d minutes and %f seconds', ...
@@ -211,15 +209,16 @@ if enable_plots
                 thetaRange, 1e3 * b_DA.Radius, 2024, 2024, 'spline');
             warning('on')
             img = db(abs(scanConvertedImage));
+            max(img(:))
             imagesc(Xs, Zs, img)
             xlabel('azimuth [mm]');
 
-%                 imagesc(rad2deg(thetaRange),1e3 * s_DA.Radius, db(abs(s_BF)));
-%                 xlabel('angle [deg]');
-%                 xlim([-15 15])
-%                 ylim([35 45])
-
-            caxis([-130  -70]);
+%             imagesc(rad2deg(thetaRange),1e3 * s_DA.Radius, db(abs(s_BF)));
+%             xlabel('angle [deg]');
+            
+            xlim([-15 15])
+            ylim([34 52])
+            caxis([-130  -60]);
             colorbar
             colormap(gray)
             ylabel('range [mm]');
