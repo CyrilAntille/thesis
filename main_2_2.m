@@ -76,13 +76,13 @@ if exist('data_DA', 'var') ~= 1
     fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
     if exist('shift', 'var') ~= 1
 %         shift = Shift(ShiftType.LateralCst, 5*1e-3 / 101, -1);
-        shift = Shift(ShiftType.LateralSpeed, 0, -1);
+        shift = Shift(ShiftType.LateralSpeed, 1, -1);
     end
     if exist('num_beams', 'var') ~= 1
         num_beams = 101;
 %         num_beams = [71 111];
     end
-    pts_theta = [-10, -10]; % Add a theta (in degrees) for each point
+    pts_theta = [15, 15]; % Add a theta (in degrees) for each point
     pts_range = [P.Tx.FocRad, 50*1e-3]; % Add a range (in m) for each point
     scat_pts = zeros([length(pts_theta) 3]);
     for pidx = 1:length(pts_theta)
@@ -163,14 +163,14 @@ fprintf('\n============================================================\n')
 if exist('data_BF', 'var') ~= 1
     fprintf('Beamforming all DA(S) images.\n')
     data_BF = cell([1, length(bfm)]);
-    for m=1:length(bfm)
+    parfor m=1:length(bfm)
         bf_method = bfm(m);
         fprintf('----------------------\n')
         fprintf('Beamforming method: %s.\n', methods_set{m})
         mstart = tic;
         
         m_BF = cell([1, length(num_beams)]);
-        parfor b=1:length(num_beams)
+        for b=1:length(num_beams)
             Pb = copyStruct(P);
             Pb.Tx.NTheta = num_beams(b);
             Pb.Tx.SinTheta = linspace(-Pb.Tx.SinThMax,Pb.Tx.SinThMax,Pb.Tx.NTheta);
@@ -236,7 +236,7 @@ for m=1:length(methods_set)
 %             imagesc(rad2deg(thetaRange),1e3 * b_DA.Radius, db(abs(b_BF)));
 %             xlabel('angle [deg]');
 
-            xlim([-15 15])
+%             xlim([-15 15])
             ylim([34 52])
 %             caxis([-130  -70]);
             caxis([-50  0]);
@@ -262,7 +262,7 @@ for m=1:length(methods_set)
         [p1_x, p1_y, ~, ~] = intersections(thetaRange, p1_bp, ...
             thetaRange, p1_3dbline, 1);
         if length(p1_x) < 2
-            p1_width = Nan;
+            p1_width = NaN;
         else
             p1_width = p1_x(2) - p1_x(1);
         end
@@ -273,7 +273,7 @@ for m=1:length(methods_set)
         [p2_x, p2_y, ~, ~] = intersections(thetaRange, p2_bp, ...
             thetaRange, p2_3dbline, 1);
         if length(p2_x) < 2
-            p2_width = Nan;
+            p2_width = NaN;
         else
             p2_width = p2_x(2) - p2_x(1);
         end
@@ -303,8 +303,11 @@ for m=1:length(methods_set)
                 'LineWidth', 2, 'LineStyle', '-', 'Color', [0,0,0]+0.2)
             p2_l = strcat('P1-3dB width= ', num2str(p2_width, 3), 'dB');
 
-            y_min = min([p1_y(1), p2_y(1)]) - 5;
-            xlim([-5 15])
+            y_min = min([p1_y(1), p2_y(1)]) - 3;
+            x_min = min([p1_x(1), p2_x(1)]) - 1;
+            x_max = max([p1_x(2), p2_x(2)]) + 1;
+%             xlim([-5 15])
+            xlim([x_min x_max])
             ylim([y_min 0])
             xlabel('angle [deg]');
             ylabel('gain [dB]');
