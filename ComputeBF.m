@@ -16,11 +16,15 @@ if bf_method == 1 %  MV
 elseif bf_method == 2 % MV-Multibeam
     bf_im = getCaponMultiBeam(dataCube,0,dl,V, ...
         pi*P.Tx.SinTheta,pi*P.Tx.SinTheta,1,0,1,0);
-elseif bf_method == 3 % IAA
+elseif bf_method == 3 % IAA MB/SB
+    [IAAImageAmp, IAAImagePow] = getIAAMultiBeam(dataCube,0,dl,V, ...
+        pi*P.Tx.SinTheta,pi*P.Tx.SinTheta,0,10,1,1);
+    bf_im = IAAImageAmp(:,:,10);
+elseif bf_method == 4 % IAA MB/MB
     [IAAImageAmp, IAAImagePow] = getIAAMultiBeam(dataCube,0,dl,V, ...
         pi*P.Tx.SinTheta,pi*P.Tx.SinTheta,1,10,1,1);
     bf_im = IAAImageAmp(:,:,10);
-elseif bf_method == 4 % IAA 500 pts
+elseif bf_method == 5 % IAA MB/MB 500 pts
     % NOTE: Should scanGridPsis be uniform along sin(theta) or theta???
     NTheta = 500;
     SinThMax = 0.3; 

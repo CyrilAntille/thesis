@@ -6,8 +6,12 @@ save_all_data = true; % Can take multiple GB of memory
 enable_plots = false;
 grayscale_plots = true;
 
-bfm = [0,1,3,4]; % 0=DAS, 1=MV, 2=MV-Multibeam, 3=IAA, 4=IAA_500pts
-methods_set = {'DAS','MV','IAA','IAA 500pts'}; % Must correspond to bfm
+% bfm = [0,1,3,4]; % 0=DAS, 1=MV, 2=MV-Multibeam, 3=IAA, 4=IAA_500pts
+% methods_set = {'DAS','MV','IAA','IAA 500pts'}; % Must correspond to bfm
+bfm = [0,1,3,4,5];
+% 0=DAS, 1=MV, 2=MV-MB, 3=IAA-MBSB, 3=IAA-MBMB, 4=IAA-MBMB-Upsampled
+% methods_set must correspond to bfm.
+methods_set = {'DAS','MV','IAA-MBSB', 'IAA-MBMB','IAA-MBMB-Upsampled'};
 
 disable_multiprocess = false; % Must disable automatic creation of 
 % parallel pool for parfor (in parallel preferences).
@@ -81,8 +85,8 @@ if exist('data_DA', 'var') ~= 1
             * pts_range(pidx);
         scat_pts(pidx, :) = pt;
     end
-    original_phantom = PointPhantom(scat_pts, 1+db2mag(20));
-    % -> pts 20dB over speckle
+    original_phantom = PointPhantom(scat_pts, 1+db2mag(30));
+    % -> pts 30dB over speckle
     
     data_phantoms = cell([1, length(num_beams)]);
     data_DA = cell([1, length(num_beams)]);

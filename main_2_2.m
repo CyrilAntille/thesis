@@ -2,11 +2,18 @@
 addpath '/uio/hume/student-u04/cyrila/Documents/MATLAB/MasterThesis/Field_II_ver_3_24' -end
 % addpath 'C:\Users\Cyril\Documents\MATLAB\Field_II_ver_3_24' -end
 
-save_all_data = false; % Can take multiple GB of memory
-enable_plots = true;
+if exist('save_all_data', 'var') ~= 1
+    save_all_data = false; % Can take multiple GB of memory
+end
+if exist('enable_plots', 'var') ~= 1
+    enable_plots = true;
+end
 
-bfm = [0,1,3,4]; % 0=DAS, 1=MV, 2=MV-Multibeam, 3=IAA, 4=IAA_500pts
-methods_set = {'DAS','MV','IAA','IAA 500pts'}; % Must correspond to bfm
+bfm = [0,1,4,5];
+% 0=DAS, 1=MV, 2=MV-MB, 3=IAA-MBSB, 3=IAA-MBMB, 4=IAA-MBMB-Upsampled
+% methods_set must correspond to bfm.
+methods_set = {'DAS','MV', 'IAA-MBMB','IAA-MBMB-Upsampled'};
+
 
 disable_multiprocess = false; % Must disable automatic creation of 
 % parallel pool for parfor (in parallel preferences).
@@ -67,24 +74,24 @@ fprintf('\n============================================================\n')
 %% 2. Create raw and DA(S) data with point scatterers
 if exist('data_DA', 'var') ~= 1
     fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
-%     shift = Shift(ShiftType.LateralCst, 5*1e-3 / 101, -1);
-    shift = Shift(ShiftType.LateralSpeed, 1, -1);
+    if exist('shift', 'var') ~= 1
+%         shift = Shift(ShiftType.LateralCst, 5*1e-3 / 101, -1);
+        shift = Shift(ShiftType.LateralSpeed, 0, -1);
+    end
     if exist('num_beams', 'var') ~= 1
         num_beams = 101;
 %         num_beams = [71 111];
     end
-    pts_theta = [0, 0]; % Add a theta (in degrees) for each point
+    pts_theta = [-10, -10]; % Add a theta (in degrees) for each point
     pts_range = [P.Tx.FocRad, 50*1e-3]; % Add a range (in m) for each point
-%     pts_theta = [0]; % Add a theta (in degrees) for each point
-%     pts_range = [P.Tx.FocRad]; % Add a range (in m) for each point
     scat_pts = zeros([length(pts_theta) 3]);
     for pidx = 1:length(pts_theta)
         pt = [sind(pts_theta(pidx)) 0 cosd(pts_theta(pidx))] ...
             * pts_range(pidx);
         scat_pts(pidx, :) = pt;
     end
-    original_phantom = PointPhantom(scat_pts, 1+db2mag(20));
-    % -> pts 20dB over speckle
+    original_phantom = PointPhantom(scat_pts, 1+db2mag(30));
+    % -> pts 30dB over speckle
     
     data_phantoms = original_phantom;
     data_DA = cell([1, length(num_beams)]);
@@ -189,75 +196,119 @@ if exist('data_BF', 'var') ~= 1
 end
 fprintf('\n============================================================\n')
 
-%% Plots
+%% 3dB width computations and Plots
 if enable_plots
-    % BF images
-    figure(1);
-    for m=1:length(methods_set)
-        m_BF = data_BF{m};
-        for b=1:length(num_beams)
-            Pb = copyStruct(P);
-            Pb.Tx.NTheta = num_beams(b);
-            Pb.Tx.SinTheta = linspace(-Pb.Tx.SinThMax,Pb.Tx.SinThMax,Pb.Tx.NTheta);
-            Pb.Tx.Theta = asin(Pb.Tx.SinTheta);
+    figure('units','normalized','position',[.2 .3 .5 .3])
+end
+max_peak_DAS = 0;
+points_3dBwidth = cell([length(methods_set), length(num_beams)]);
+for m=1:length(methods_set)
+    m_BF = data_BF{m};
+    for b=1:length(num_beams)
+        Pb = copyStruct(P);
+        Pb.Tx.NTheta = num_beams(b);
+        Pb.Tx.SinTheta = linspace(-Pb.Tx.SinThMax,Pb.Tx.SinThMax,Pb.Tx.NTheta);
+        Pb.Tx.Theta = asin(Pb.Tx.SinTheta);
 
-            b_BF = m_BF{b};
-            b_DA = data_DA{b};
+        b_BF = m_BF{b};
+        b_DA = data_DA{b};
+        if m == 1
+            max_peak_DAS = max(db(abs(b_BF(:))));
+        end
 
-            thetaRange = Pb.Tx.Theta;
-            if strcmp(methods_set(m),'IAA 500pts')
-                thetaRange = linspace(Pb.Tx.Theta(1), Pb.Tx.Theta(end), 500);
-            end
+        thetaRange = Pb.Tx.Theta;
+        if strcmp(methods_set(m),'IAA-MBMB-Upsampled')
+            thetaRange = linspace(Pb.Tx.Theta(1), Pb.Tx.Theta(end), 500);
+        end
+        
+        if enable_plots
             warning('off')
             [scanConvertedImage, Xs, Zs] = getScanConvertedImage(b_BF, ...
                 thetaRange, 1e3 * b_DA.Radius, 2024, 2024, 'spline');
             warning('on')
             img = db(abs(scanConvertedImage));
-            
-            % beampatterns - Assumes 2 points
-            bf_img = db(abs(b_BF));
-            separation = P.Tx.FocRad + 5  * 1e-3;
-            z_sep = find(b_DA.Radius >= separation, 1);
-            p1_bp = max(bf_img(1:z_sep, :) - max(bf_img(:)), [], 1);
-            p2_bp = max(bf_img(z_sep+1:end, :) - max(bf_img(:)), [], 1);
-            
-%             figure(3); 
-            subplot(1,2,2)
-            plot(rad2deg(thetaRange), p1_bp, 'b', ...
-                rad2deg(thetaRange), p2_bp, 'r', 'LineWidth', 2)
-            line([0 0],[-100 0]);
-            xlim([-15 15])
-            ylim([-50 0])
-            xlabel('angle [deg]');
-            ylabel('gain [dB]');
+            img = img - max_peak_DAS;
 
-            % Scatterer points dilation
-            impts = img > -85;
-            pts = bwconncomp(impts);
-%             figure(2); imagesc(impts)
-%             if pts.NumObjects ~= length(data_phantoms.amplitudes)
-%                 error('Binary image has more/less points than expected')
-%             end
-            for p=1:pts.NumObjects
-                p_area = length(pts.PixelIdxList{p});
-            end
-            
 %             figure(1);
             subplot(1,2,1)
             imagesc(Xs, Zs, img)
             xlabel('azimuth [mm]');
-
 %             imagesc(rad2deg(thetaRange),1e3 * b_DA.Radius, db(abs(b_BF)));
 %             xlabel('angle [deg]');
-            
+
             xlim([-15 15])
             ylim([34 52])
-            caxis([-130  -70]);
+%             caxis([-130  -70]);
+            caxis([-50  0]);
             colorbar
             colormap(gray)
             ylabel('range [mm]');
             title(['Method :', methods_set{m}, ', No Beams: ', ...
                 int2str(num_beams(b))])
+        end
+
+        thetaRange = rad2deg(thetaRange);
+        % beampatterns - Assumes 2 points
+        bf_img = db(abs(b_BF))  - max_peak_DAS;
+        separation = P.Tx.FocRad + 5  * 1e-3; % -> 45mm
+        z_sep = find(b_DA.Radius >= separation, 1);
+        p1_bp = max(bf_img(1:z_sep, :), [], 1);
+        p2_bp = max(bf_img(z_sep+1:end, :), [], 1);
+
+        warning('off')
+        [p1db, p1deg] = findpeaks(p1_bp, thetaRange, ...
+            'SortStr','descend');
+        p1_3dbline = ones(size(thetaRange)) .* (p1db(1) - 3);
+        [p1_x, p1_y, ~, ~] = intersections(thetaRange, p1_bp, ...
+            thetaRange, p1_3dbline, 1);
+        if length(p1_x) < 2
+            p1_width = Nan;
+        else
+            p1_width = p1_x(2) - p1_x(1);
+        end
+
+        [p2db, p2deg] = findpeaks(p2_bp, thetaRange, ...
+            'SortStr','descend');
+        p2_3dbline = ones(size(thetaRange)) * (p2db(1) - 3);
+        [p2_x, p2_y, ~, ~] = intersections(thetaRange, p2_bp, ...
+            thetaRange, p2_3dbline, 1);
+        if length(p2_x) < 2
+            p2_width = Nan;
+        else
+            p2_width = p2_x(2) - p2_x(1);
+        end
+        warning('on')
+        points_3dBwidth{m,b} = [p1_width, p2_width];
+        
+        if enable_plots
+    %             figure(2); 
+            subplot(1,2,2)
+            p = plot(thetaRange, p1_bp, 'b', ...
+                thetaRange, p2_bp, 'r', 'LineWidth', 2);
+            linestyle_list = {'-.','--','-',':'};
+    %             markers_list = {'+','x','diamond','o'};
+            for pidx=1:length(p)
+    %                 p(pidx).Marker = markers_list{pidx};
+                p(pidx).LineStyle = linestyle_list{pidx};
+            end
+            p1_title = strcat('P1-', ...
+                int2str(data_phantoms.positions(1,3)*1000), 'mm range');
+            p2_title = strcat('P2-', ...
+                int2str(data_phantoms.positions(2,3)*1000), 'mm range');
+
+            line('XData', [p1_x(1) p1_x(2)], 'YData', [p1_y(1) p1_y(1)], ...
+                'LineWidth', 2, 'LineStyle', '-', 'Color', [0,0,0]+0.4)
+            p1_l = strcat('P1-3dB width= ', num2str(p1_width, 3), 'dB');
+            line('XData', [p2_x(1) p2_x(2)], 'YData', [p2_y(1) p2_y(1)], ...
+                'LineWidth', 2, 'LineStyle', '-', 'Color', [0,0,0]+0.2)
+            p2_l = strcat('P1-3dB width= ', num2str(p2_width, 3), 'dB');
+
+            y_min = min([p1_y(1), p2_y(1)]) - 5;
+            xlim([-5 15])
+            ylim([y_min 0])
+            xlabel('angle [deg]');
+            ylabel('gain [dB]');
+            legend({p1_title, p2_title, p1_l, p2_l}, 'Location', 'best');
             pause
         end
     end
