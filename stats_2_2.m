@@ -1,14 +1,15 @@
 %% 2.2 - Motion between beams - Stats
 save_all_data = false;
 enable_plots = false;
-load_speckle = false;
+load_speckle = true;
 
 num_beams = 101;
 speeds = [0, 0.5, 1, 1.5, 2];
 mainlobes_3dBwidth = cell(size(speeds));
 for sp=1:length(speeds)
     if load_speckle
-        load 2_1_speckle_2_10-6.mat
+%         load 2_1_speckle_2_10-6.mat
+        load ..\data\2_1_speckle_2_10-6.mat
     end
     shift = Shift(ShiftType.LateralSpeed, speeds(sp), -1);
     main_2_2

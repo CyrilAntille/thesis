@@ -14,6 +14,8 @@ bfm = [0,1,4,5];
 % methods_set must correspond to bfm.
 methods_set = {'DAS','MV', 'IAA-MBMB','IAA-MBMB-Upsampled'};
 
+% bfm = [3];
+% methods_set = {'IAA-MBSB'};
 
 disable_multiprocess = false; % Must disable automatic creation of 
 % parallel pool for parfor (in parallel preferences).
@@ -199,6 +201,7 @@ fprintf('\n============================================================\n')
 %% 3dB width computations and Plots
 if enable_plots
     figure('units','normalized','position',[.2 .3 .5 .3])
+%     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
 end
 max_peak_DAS = 0;
 points_3dBwidth = cell([length(methods_set), length(num_beams)]);
@@ -236,7 +239,7 @@ for m=1:length(methods_set)
 %             imagesc(rad2deg(thetaRange),1e3 * b_DA.Radius, db(abs(b_BF)));
 %             xlabel('angle [deg]');
 
-%             xlim([-15 15])
+            xlim([-20 20])
             ylim([34 52])
 %             caxis([-130  -70]);
             caxis([-50  0]);
@@ -313,6 +316,14 @@ for m=1:length(methods_set)
             ylabel('gain [dB]');
             legend({p1_title, p2_title, p1_l, p2_l}, 'Location', 'best');
             pause
+            im_name = strcat(methods_set{m}, '_', int2str(num_beams(b)),...
+                '_', num2str(shift.val, 2));
+            saveas(gcf, strcat('../images/fig/', im_name, '.fig'), 'fig')
+            saveas(gcf, strcat('../images/png/', im_name, '.png'), 'png')
         end
     end
 end
+if enable_plots
+    close
+end
+fprintf('Finished!')
