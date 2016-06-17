@@ -1,12 +1,16 @@
 %% 2.2: Motion between beams
-addpath '/uio/hume/student-u04/cyrila/Documents/MATLAB/MasterThesis/Field_II_ver_3_24' -end
+% addpath '/uio/hume/student-u04/cyrila/Documents/MATLAB/MasterThesis/Field_II_ver_3_24' -end
 % addpath 'C:\Users\Cyril\Documents\MATLAB\Field_II_ver_3_24' -end
+addpath ../Field_II_ver_3_24/ -end
 
 if exist('save_all_data', 'var') ~= 1
     save_all_data = false; % Can take multiple GB of memory
 end
-if exist('enable_plots', 'var') ~= 1
-    enable_plots = true;
+if exist('show_plots', 'var') ~= 1
+    show_plots = true;
+end
+if exist('save_plots', 'var') ~= 1
+    save_plots = false;
 end
 
 bfm = [0,1,4,5];
@@ -199,10 +203,12 @@ end
 fprintf('\n============================================================\n')
 
 %% 3dB width computations and Plots
-if enable_plots
+if show_plots
     figure('units','normalized','position',[.2 .3 .5 .3])
-%     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+else
+    figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
 end
+
 max_peak_DAS = 0;
 points_3dBwidth = cell([length(methods_set), length(num_beams)]);
 for m=1:length(methods_set)
@@ -224,7 +230,7 @@ for m=1:length(methods_set)
             thetaRange = linspace(Pb.Tx.Theta(1), Pb.Tx.Theta(end), 500);
         end
         
-        if enable_plots
+        if show_plots || save_plots
             warning('off')
             [scanConvertedImage, Xs, Zs] = getScanConvertedImage(b_BF, ...
                 thetaRange, 1e3 * b_DA.Radius, 2024, 2024, 'spline');
@@ -283,7 +289,7 @@ for m=1:length(methods_set)
         warning('on')
         points_3dBwidth{m,b} = [p1_width, p2_width];
         
-        if enable_plots
+        if show_plots || save_plots
     %             figure(2); 
             subplot(1,2,2)
             p = plot(thetaRange, p1_bp, 'b', ...
@@ -315,15 +321,18 @@ for m=1:length(methods_set)
             xlabel('angle [deg]');
             ylabel('gain [dB]');
             legend({p1_title, p2_title, p1_l, p2_l}, 'Location', 'best');
-            pause
-            im_name = strcat(methods_set{m}, '_', int2str(num_beams(b)),...
-                '_', num2str(shift.val, 2));
-            saveas(gcf, strcat('../images/fig/', im_name, '.fig'), 'fig')
-            saveas(gcf, strcat('../images/png/', im_name, '.png'), 'png')
+            
+            if save_plots
+                im_name = strcat(methods_set{m}, '_', int2str(num_beams(b)),...
+                    '_', num2str(shift.val, 2));
+                saveas(gcf, strcat('../images/fig/', im_name, '.fig'), 'fig')
+                saveas(gcf, strcat('../images/png/', im_name, '.png'), 'png')
+            end
+            if show_plots
+                pause
+            end
         end
     end
 end
-if enable_plots
-    close
-end
-fprintf('Finished!')
+close
+fprintf('Main_2_2 finished!')
