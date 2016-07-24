@@ -1,6 +1,4 @@
 %% 2.2: Motion between beams
-% addpath '/uio/hume/student-u04/cyrila/Documents/MATLAB/MasterThesis/Field_II_ver_3_24' -end
-% addpath 'C:\Users\Cyril\Documents\MATLAB\Field_II_ver_3_24' -end
 addpath ../Field_II_ver_3_24/ -end
 
 if exist('save_all_data', 'var') ~= 1
@@ -13,10 +11,10 @@ if exist('save_plots', 'var') ~= 1
     save_plots = false;
 end
 
-bfm = [0,1,4,5];
+bfm = [0,1,3,4,5];
 % 0=DAS, 1=MV, 2=MV-MB, 3=IAA-MBSB, 3=IAA-MBMB, 4=IAA-MBMB-Upsampled
 % methods_set must correspond to bfm.
-methods_set = {'DAS','MV', 'IAA-MBMB','IAA-MBMB-Upsampled'};
+methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB','IAA-MBMB-Upsampled'};
 
 % bfm = [3];
 % methods_set = {'IAA-MBSB'};
@@ -82,7 +80,7 @@ if exist('data_DA', 'var') ~= 1
     fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
     if exist('shift', 'var') ~= 1
 %         shift = Shift(ShiftType.LateralCst, 5*1e-3 / 101, -1);
-        shift = Shift(ShiftType.LateralSpeed, 1, -1);
+        shift = Shift(ShiftType.LateralSpeed, 0, -1);
     end
     if exist('num_beams', 'var') ~= 1
         num_beams = 101;
@@ -211,6 +209,7 @@ end
 
 max_peak_DAS = 0;
 points_3dBwidth = cell([length(methods_set), length(num_beams)]);
+points_peaksAmpl = cell([length(methods_set), length(num_beams)]);
 for m=1:length(methods_set)
     m_BF = data_BF{m};
     for b=1:length(num_beams)
@@ -235,7 +234,7 @@ for m=1:length(methods_set)
             [scanConvertedImage, Xs, Zs] = getScanConvertedImage(b_BF, ...
                 thetaRange, 1e3 * b_DA.Radius, 2024, 2024, 'spline');
             warning('on')
-            img = db(abs(scanConvertedImage));
+            img = db(scanConvertedImage);
             img = img - max_peak_DAS;
 
 %             figure(1);
@@ -248,7 +247,7 @@ for m=1:length(methods_set)
             xlim([-20 20])
             ylim([34 52])
 %             caxis([-130  -70]);
-            caxis([-50  0]);
+%             caxis([-50  0]);
             colorbar
             colormap(gray)
             ylabel('range [mm]');
@@ -258,7 +257,7 @@ for m=1:length(methods_set)
 
         thetaRange = rad2deg(thetaRange);
         % beampatterns - Assumes 2 points
-        bf_img = db(abs(b_BF))  - max_peak_DAS;
+        bf_img = db(b_BF)  - max_peak_DAS;
         separation = P.Tx.FocRad + 5  * 1e-3; % -> 45mm
         z_sep = find(b_DA.Radius >= separation, 1);
         p1_bp = max(bf_img(1:z_sep, :), [], 1);
@@ -288,6 +287,11 @@ for m=1:length(methods_set)
         end
         warning('on')
         points_3dBwidth{m,b} = [p1_width, p2_width];
+        
+        bf_im = db(abs(b_BF));
+        p1_max = max(bf_im(1:z_sep, :), [], 1);
+        p2_max = max(bf_im(z_sep+1:end, :), [], 1);
+        points_peaksAmpl{m,b} = [p1_max(1), p2_max(1)];
         
         if show_plots || save_plots
     %             figure(2); 

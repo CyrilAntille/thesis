@@ -1,8 +1,7 @@
 %% 2.1: Motion between frames
-addpath '/uio/hume/student-u04/cyrila/Documents/MATLAB/MasterThesis/Field_II_ver_3_24' -end
-% addpath 'C:\Users\Cyril\Documents\MATLAB\Field_II_ver_3_24' -end
+addpath ../Field_II_ver_3_24/ -end
 
-save_all_data = true; % Can take multiple GB of memory
+save_all_data = false; % Can take multiple GB of memory
 enable_plots = false;
 grayscale_plots = true;
 
@@ -72,13 +71,13 @@ fprintf('\n============================================================\n')
 %% 2. Create raw and DA(S) data with point scatterers
 if exist('data_DA', 'var') ~= 1
     fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
-    shift = Shift(ShiftType.RadialVar, 1/2, 2);
+    shift = Shift(ShiftType.RadialVar, 1/2, 1);
     if exist('num_beams', 'var') ~= 1
-        num_beams = 61:10:91;
+        num_beams = 91;
     end
     
-    pts_theta = [0]; % Add a theta (in degrees) for each point
-    pts_range = [P.Tx.FocRad]; % Add a range (in m) for each point
+    pts_theta = [0, 0]; % Add a theta (in degrees) for each point
+    pts_range = [P.Tx.FocRad, 50*1e-3]; % Add a range (in m) for each point
     scat_pts = zeros([length(pts_theta) 3]);
     for pidx = 1:length(pts_theta)
         pt = [sind(pts_theta(pidx)) 0 cosd(pts_theta(pidx))] ...
