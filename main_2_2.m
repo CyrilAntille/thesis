@@ -16,9 +16,6 @@ bfm = [0,1,3,4,5];
 % methods_set must correspond to bfm.
 methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB','IAA-MBMB-Upsampled'};
 
-% bfm = [3];
-% methods_set = {'IAA-MBSB'};
-
 disable_multiprocess = false; % Must disable automatic creation of 
 % parallel pool for parfor (in parallel preferences).
 
@@ -147,11 +144,12 @@ if exist('data_DA', 'var') ~= 1
     end
     if save_all_data
         speckle_name = '_noSpeckle';
-        if add_speckle
+        if ~isempty(speckle_raw_image)
             speckle_name = ['_speckle' num2str(P.Seed)];
         end
         output_file = ['2_1_' num2str(num_beams(1)) '_' ...
             num2str(num_beams(end)) speckle_name '.mat'];
+        output_file = strcat('../data/', output_file);
         fprintf('\nNSaving DA(S) data to file.')
         save(output_file, 'shift', 'num_beams', 'data_phantoms', ...
             'data_DA', '-v7.3')
@@ -189,11 +187,12 @@ if exist('data_BF', 'var') ~= 1
     end
     if save_all_data
         speckle_name = '_noSpeckle';
-        if add_speckle
+        if ~isempty(speckle_raw_image)
             speckle_name = ['_speckle' num2str(P.Seed)];
         end
         output_file = ['2_1_' num2str(num_beams(1)) '_' ...
             num2str(num_beams(end)) speckle_name '.mat'];
+        output_file = strcat('../data/', output_file);
         fprintf('\nNSaving beamformed data to file.')
         save(output_file, 'data_BF', '-append')
     end

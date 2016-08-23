@@ -43,8 +43,8 @@ for b=1:length(num_beams)
         end
         subplot(2,1,1)
         p1 = plot(speeds, p_raw, 'LineWidth', 2);
-        linestyle_list = {'-.','--','-',':', ':'};
-        markers_list = {'+','x','diamond','o', 'x'};
+        linestyle_list = {':','-','--','-.','-'};
+        markers_list = {'+','x','diamond','o','*'};
         for pidx=1:length(p1)
             p1(pidx).Marker = markers_list{pidx};
             p1(pidx).LineStyle = linestyle_list{pidx};
@@ -103,8 +103,6 @@ for b=1:length(num_beams)
         end
         subplot(2,1,1)
         p1 = plot(speeds, p_raw, 'LineWidth', 2);
-        linestyle_list = {'-.','--','-',':'};
-        markers_list = {'+','x','diamond','o'};
         for pidx=1:length(p1)
             p1(pidx).Marker = markers_list{pidx};
             p1(pidx).LineStyle = linestyle_list{pidx};

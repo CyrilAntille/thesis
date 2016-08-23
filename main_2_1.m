@@ -2,8 +2,8 @@
 addpath ../Field_II_ver_3_24/ -end
 
 save_all_data = false; % Can take multiple GB of memory
-enable_plots = false;
-grayscale_plots = true;
+enable_plots = true;
+grayscale_plots = false;
 
 % bfm = [0,1,3,4]; % 0=DAS, 1=MV, 2=MV-Multibeam, 3=IAA, 4=IAA_500pts
 % methods_set = {'DAS','MV','IAA','IAA 500pts'}; % Must correspond to bfm
@@ -41,6 +41,7 @@ if create_speckle && exist('speckle_raw', 'var') ~= 1
     if save_speckle
         output_file = ['2_1_speckle_' num2str(P.Seed) '_10-' ...
             num2str(log10(P.NumPoints)) '.mat'];
+        output_file = strcat('../data/', output_file);
         fprintf('\nNSaving speckle raw data to file.')
         save(output_file, 'P', 'speckle_raw', 'speckle_phantom', '-v7.3')
     end
@@ -71,7 +72,7 @@ fprintf('\n============================================================\n')
 %% 2. Create raw and DA(S) data with point scatterers
 if exist('data_DA', 'var') ~= 1
     fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
-    shift = Shift(ShiftType.RadialVar, 1/2, 1);
+    shift = Shift(ShiftType.RadialVar, 1/2, 2);
     if exist('num_beams', 'var') ~= 1
         num_beams = 91;
     end
@@ -120,11 +121,12 @@ if exist('data_DA', 'var') ~= 1
     end
     if save_all_data
         speckle_name = '_noSpeckle';
-        if add_speckle
+        if ~isempty(speckle_raw_image)
             speckle_name = ['_speckle' num2str(P.Seed)];
         end
         output_file = ['2_1_' num2str(num_beams(1)) '_' ...
             num2str(num_beams(end)) speckle_name '.mat'];
+        output_file = strcat('../data/', output_file);
         fprintf('\nNSaving DA(S) data to file.')
         save(output_file, 'shift', 'num_beams', 'data_phantoms', ...
             'data_DA', '-v7.3')
@@ -167,11 +169,12 @@ if exist('data_BF', 'var') ~= 1
     end
     if save_all_data
         speckle_name = '_noSpeckle';
-        if add_speckle
+        if ~isempty(speckle_raw_image)
             speckle_name = ['_speckle' num2str(P.Seed)];
         end
         output_file = ['2_1_' num2str(num_beams(1)) '_' ...
             num2str(num_beams(end)) speckle_name '.mat'];
+        output_file = strcat('../data/', output_file);
         fprintf('\nNSaving beamformed data to file.')
         save(output_file, 'data_BF', '-append')
     end
@@ -240,8 +243,8 @@ if enable_plots
     % Max loss
     figure;
     p = plot(num_beams, beam_max', 'LineWidth', 2);
-    linestyle_list = {':','-','--','-.'};
-    markers_list = {'+','x','diamond','o'};
+    linestyle_list = {':','-','--','-.','-'};
+    markers_list = {'+','x','diamond','o','*'};
     grayscale_alpha = linspace(0,0.4,length(p));
     for pidx=1:length(p)
         p(pidx).Marker = markers_list{pidx};
@@ -263,11 +266,10 @@ if enable_plots
     if length(num_beams) > 1
         xlim([num_beams(1) num_beams(end)]) 
     end
+    ylim([0 5])
     % Mean loss
     figure;
     p = plot(num_beams, beam_mean', 'LineWidth', 2);
-    linestyle_list = {':','-','--','-.'};
-    markers_list = {'+','x','diamond','o'};
     grayscale_alpha = linspace(0,0.4,length(p));
     for pidx=1:length(p)
         p(pidx).Marker = markers_list{pidx};
