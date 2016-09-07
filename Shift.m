@@ -2,7 +2,7 @@ classdef Shift
     %SHIFT Defines shift per frame
     properties
         type = ShiftType.RadialVar;
-        val = 0; % Ref ShiftType
+        val = 0; % Ref ShiftType.m
         num_shifts = 0;
     end
     methods

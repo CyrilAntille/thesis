@@ -1,3 +1,13 @@
+%% TEST
+
+mainP = MainParameters();
+fprintf('\n0. NTheta: %d.\n', mainP.P.Tx.NTheta)
+parfor t=1:4
+    fprintf('\n1. %d: NTheta: %d.\n', t, mainP.P.Tx.NTheta)
+    mainP.set.P(101*t);
+    fprintf('\n2. %d: NTheta: %d.\n', t, mainP.P.Tx.NTheta)
+end
+
 %% Aperture smoothing function
 
 M = 5; % Number of sensors
@@ -57,3 +67,4 @@ for m=1:length(methods_set)
     end
 end
 hold off; legend(methods_set); pause; close;
+
