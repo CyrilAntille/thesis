@@ -1,17 +1,16 @@
 %% 2.2: Motion between beams
 clear all
 mainP = MainParameters();
-mainP.pts_theta = [0, 0]; % Add a theta (in degrees) for each point
-mainP.pts_range = [40*1e-3, 50*1e-3]; % Add a range (in m) for each point
-mainP.shift = Shift(ShiftType.LateralSpeed, 1, -1); % Ref Shift.m
-mainP.num_beams = 101; % can be a single value or list of values
+mainP.pts_range = [40, 50]; % Add a range (in mm) for each point
+mainP.shift = Shift(ShiftType.LinearVar, 1/30, -1, 90); % Ref Shift.m
+mainP.num_beams = 61; % can be a single value or list of values
 mainP.shift_per_beam = true;
 
-main_init
-
+show_plots = true; % If false, saves plots to .png file
 grayscale_plots = false;
-show_plots = true;
-save_plots = false;
+
+%%
+main_init
 
 %% 3dB width computations
 
@@ -37,10 +36,10 @@ for m=1:length(mainP.methods_set)
         
         thetaRange = rad2deg(thetaRange);
         bf_img = db(b_BF)  - max_peak_DAS;
-        for p=1:length(mainP.pts_theta)
+        for p=1:length(mainP.pts_range)
             p_range = mainP.pts_range(p); % range not constant if LateralShift
-            minr = find(b_DA.Radius >= p_range - 2*1e-3, 1);
-            maxr = find(b_DA.Radius >= p_range + 2*1e-3, 1);
+            minr = find(b_DA.Radius >= (p_range - 2)*1e-3, 1);
+            maxr = find(b_DA.Radius >= (p_range + 2)*1e-3, 1);
             p_bp = max(bf_img(minr:maxr, :), [], 1);
             [pdb, pdeg] = findpeaks(p_bp, thetaRange, ...
                 'SortStr','descend');
@@ -64,8 +63,12 @@ linestyle_list = {'-.','--','-',':'};
 markers_list = {'+','x','diamond','o'};
 colors_list = {'b','r','g','k','m','y'};
 
+if show_plots
+    figure;
+else
+    figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+end
 max_peak_DAS = 0; max_peak_DAS_img = 0;
-figure;
 for m=1:length(mainP.methods_set)
     m_BF = data_BF{m};
     for b=1:length(mainP.num_beams)
@@ -94,8 +97,8 @@ for m=1:length(mainP.methods_set)
         caxis([-50  0]);
 %         imagesc(Xs, Zs, img)
 %         caxis([-120  -70]);
-%             xlim([-15 15])
-%             ylim([35 45])
+        xlim([-20 20])
+        ylim([min(mainP.pts_range)-5 max(mainP.pts_range)+5])
         colorbar
         colormap(gray)
         xlabel('azimuth [mm]');
@@ -109,14 +112,13 @@ for m=1:length(mainP.methods_set)
         thetaRange = rad2deg(thetaRange);
         pl_legend = {};
         y_min = Inf; x_min = Inf; x_max = -Inf;
-        for p=1:length(mainP.pts_theta)
+        for p=1:length(mainP.pts_range)
             p_range = mainP.pts_range(p); % range not constant if LateralShift
-            minr = find(b_DA.Radius >= p_range - 2*1e-3, 1);
-            maxr = find(b_DA.Radius >= p_range + 2*1e-3, 1);
+            minr = find(b_DA.Radius >= (p_range - 2)*1e-3, 1);
+            maxr = find(b_DA.Radius >= (p_range + 2)*1e-3, 1);
             p_bp = max(bf_img(minr:maxr, :), [], 1);
-            plot(thetaRange, p_bp, colors_list{p}, 'LineWidth', 2);
-%             pl(1).Marker = markers_list{p};
-%             pl(1).LineStyle = linestyle_list{p};
+            plot(thetaRange, p_bp, colors_list{p}, 'LineWidth', 2, ...
+                'LineStyle', linestyle_list{p}, 'Marker', markers_list{p});
             
             p_y = pts_3dB{p,m,b}(1) - 3;
             p_title = strcat('P', int2str(p), '-', ...
@@ -137,42 +139,53 @@ for m=1:length(mainP.methods_set)
         xlabel('angle [deg]');
         ylabel('gain [dB]');
         legend(pl_legend, 'Location', 'best');
-        hold off; pause
-    end
-end
-close
-fprintf('Main_2_2 finished!')
-%% Beamformed images plots
-figure;
-for m=1:length(mainP.methods_set)
-    m_BF = data_BF{m};
-    for b=1:length(mainP.num_beams)
-        Pb = mainP.copyP(mainP.num_beams(b));
-        b_BF = m_BF{b};
-        b_DA = data_DA{b};
-
-        thetaRange = Pb.Tx.Theta;
-        if strcmp(mainP.methods_set(m),'IAA-MBMB-Upsampled')
-            thetaRange = linspace(Pb.Tx.Theta(1), Pb.Tx.Theta(end), ...
-                mainP.upsample_number);
+        hold off;
+        
+        if show_plots
+            pause
+        else
+            im_name = strcat(int2str(mainP.num_beams(b)), '_', ...
+                char(mainP.shift.type), '_', int2str(mainP.shift.direction),...
+                '_', mainP.methods_set{m});
+    %         saveas(gcf, strcat('../images/fig/', im_name, '.fig'), 'fig')
+            saveas(gcf, strcat('../images/png/', im_name, '.png'), 'png')
         end
-        warning('off')
-        [scanConvertedImage, Xs, Zs] = getScanConvertedImage(b_BF, ...
-            thetaRange, 1e3 * b_DA.Radius, 2024, 2024, 'spline');
-        warning('on')
-        img = db(abs(scanConvertedImage));
-        imagesc(Xs, Zs, img)
-        xlabel('azimuth [mm]');
-        max(img(:))
-%             xlim([-15 15])
-%             ylim([35 45])
-        caxis([-120  -70]);
-        colorbar
-        colormap(gray)
-        ylabel('range [mm]');
-        title(['Method :', mainP.methods_set{m}, ', No Beams: ', ...
-            int2str(mainP.num_beams(b))])
-        pause
     end
 end
 close
+fprintf('\nMain_2_2 finished!\n')
+%% Beamformed images plots
+if show_plots
+    figure;
+    for m=1:length(mainP.methods_set)
+        m_BF = data_BF{m};
+        for b=1:length(mainP.num_beams)
+            Pb = mainP.copyP(mainP.num_beams(b));
+            b_BF = m_BF{b};
+            b_DA = data_DA{b};
+
+            thetaRange = Pb.Tx.Theta;
+            if strcmp(mainP.methods_set(m),'IAA-MBMB-Upsampled')
+                thetaRange = linspace(Pb.Tx.Theta(1), Pb.Tx.Theta(end), ...
+                    mainP.upsample_number);
+            end
+            warning('off')
+            [scanConvertedImage, Xs, Zs] = getScanConvertedImage(b_BF, ...
+                thetaRange, 1e3 * b_DA.Radius, 2024, 2024, 'spline');
+            warning('on')
+            img = db(abs(scanConvertedImage));
+            imagesc(Xs, Zs, img)
+            xlabel('azimuth [mm]');
+    %             xlim([-15 15])
+    %             ylim([35 45])
+            caxis([-120  -70]);
+            colorbar
+            colormap(gray)
+            ylabel('range [mm]');
+            title(['Method :', mainP.methods_set{m}, ', No Beams: ', ...
+                int2str(mainP.num_beams(b))])
+            pause
+        end
+    end
+    close
+end

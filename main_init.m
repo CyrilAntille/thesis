@@ -52,11 +52,11 @@ fprintf('\n============================================================\n')
 %% 2. Create raw and DA(S) data with point scatterers
 if ~exist('data_DA', 'var')
     fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
-    scat_pts = zeros([length(mainP.pts_theta) 3]);
-    for pidx = 1:length(mainP.pts_theta)
-        pt = [sind(mainP.pts_theta(pidx)) 0 cosd(mainP.pts_theta(pidx))]...
-            * mainP.pts_range(pidx);
-        scat_pts(pidx, :) = pt;
+    scat_pts = zeros([length(mainP.pts_range) 3]);
+    pts_angle = 0; % Must be 0 to guaranty a transmit beam hitting the pt
+    for pidx = 1:length(mainP.pts_range)
+        scat_pts(pidx, :) = [sind(pts_angle) 0 cosd(pts_angle)] ...
+            * mainP.pts_range(pidx) * 1e-3;
     end
     original_phantom = PointPhantom(scat_pts, 1+db2mag(30));
     % -> pts 30dB over speckle
@@ -73,7 +73,8 @@ if ~exist('data_DA', 'var')
         nstart = tic;
         
         if mainP.shift_per_beam
-            b_shift = Shift(mainP.shift.type, mainP.shift.val, Pb.Tx.NTheta);
+            b_shift = Shift(mainP.shift.type, mainP.shift.val, ...
+                Pb.Tx.NTheta, mainP.shift.direction);
             beam_shift = Pb.Tx.SinTheta(2) - Pb.Tx.SinTheta(1);
         else
             b_shift = mainP.shift;
@@ -91,6 +92,7 @@ if ~exist('data_DA', 'var')
                 new_image(1:size(s_raw.image),:) = ...
                     new_image(1:size(s_raw.image),:) + s_raw.image;
                 s_raw.image = new_image;
+                %TODO: Maybe always include focus range to image!
             end
             if mainP.shift_per_beam
                 Ps = mainP.copyP(1);
@@ -128,7 +130,7 @@ if ~exist('data_DA', 'var')
     if mainP.save_all_data
         output_file = mainP.outputFileName(~isempty(speckle_raw_image));
         fprintf('\nNSaving DA(S) data  into: %s\n', output_file)
-        save(output_file, 'mainP', 'shift', 'num_beams', 'data_phantoms', ...
+        save(output_file, 'mainP', 'shift', 'num_beams', 'data_phantoms',...
             'data_DA', '-v7.3')
     end
 end

@@ -12,16 +12,15 @@ classdef MainParameters
         speckle_save = true;
         % Speckle creation can take a long time. It is therefore
         % recommended to save it in a file.
-        speckle_load = false;
+        speckle_load = true;
         speckle_file = '..\data\2_1_speckle_2_10-6.mat';
         % Speckle noise is added to the beamformed image if the speckle raw
         % image (speckle_raw) exists in the workspace (so most of the times
         % if speckle_create or speckle_load are true
         
         % raw and DA(S) image creation parameters
-        pts_theta = [0]; % Add a theta (in degrees) for each point
-        pts_range = [40*1e-3]; % Add a range (in m) for each point
-        shift = Shift(ShiftType.RadialVar, 1/2, 3); % Ref Shift.m
+        pts_range = [40]; % Add a range (in mm) for each point
+        shift = Shift(ShiftType.RadialVar, 1/2, 3, 0); % Ref Shift.m
         num_beams = 101; % can be a single value or list of values
         shift_per_beam = false;
         % If true, the scatterer points are shifted after each beam.

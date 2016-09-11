@@ -1,25 +1,26 @@
 %% 2.1: Motion between frames
 clear all
 mainP = MainParameters();
-mainP.pts_theta = [0, 0]; % Add a theta (in degrees) for each point
-mainP.pts_range = [40*1e-3, 50*1e-3]; % Add a range (in m) for each point
-mainP.shift = Shift(ShiftType.RadialVar, 1/4, 4); % Ref Shift.m
-mainP.num_beams = 101; % can be a single value or list of values
+mainP.pts_range = [40, 50]; % Add a range (in mm) for each point
+mainP.shift = Shift(ShiftType.LinearCst, 2*1e-3, 3, 0); % Ref Shift.m
+mainP.num_beams = 61; % can be a single value or list of values
 mainP.shift_per_beam = false;
 
-main_init
-
+show_plots = true; % If false, saves plots to .png file
 grayscale_plots = false;
+
+%%
+main_init
 
 %% Estimate scalloping loss
 fprintf('Scalloping loss estimation and plotting\n')
 theta_max = asin(mainP.P.Tx.SinThMax);
 % Maximum scalloping loss (for all beams)
-loss_beams = zeros([length(mainP.pts_theta) ...
+loss_beams = zeros([length(mainP.pts_range) ...
     length(mainP.methods_set) length(mainP.num_beams)]);
 % Scalloping loss per shift (for a given number of beams)
 chosen_num_beams = mainP.num_beams(1);
-loss_shift = zeros([length(mainP.pts_theta) ...
+loss_shift = zeros([length(mainP.pts_range) ...
     length(mainP.methods_set) length(mainP.shift.num_shifts)]);
 
 for m=1:length(mainP.methods_set)
@@ -29,7 +30,7 @@ for m=1:length(mainP.methods_set)
     for b=1:length(mainP.num_beams)
         b_BF = m_BF{b};
         b_DA = data_DA{b};
-        pts_ampl = ones(mainP.shift.num_shifts,length(mainP.pts_theta))*Inf;
+        pts_ampl = ones(mainP.shift.num_shifts,length(mainP.pts_range))*Inf;
         for s=1:mainP.shift.num_shifts
             s_BF = b_BF{s};
             s_DA = b_DA{s};
@@ -79,9 +80,13 @@ if grayscale_plots
     line_clr = [0,0,0]+0.6;
 end
 
-% Loss vs shift
-for p=1:length(mainP.pts_theta)
+if show_plots
     figure;
+else
+    figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+end
+% Loss vs shift
+for p=1:length(mainP.pts_range)
     shifts = (0:mainP.shift.num_shifts-1) * mainP.shift.val;
     pl = plot(shifts, squeeze(loss_shift(p,:,:)), 'LineWidth', 2);
     grayscale_alpha = linspace(0,0.4,length(pl));
@@ -104,15 +109,21 @@ for p=1:length(mainP.pts_theta)
     legend([mainP.methods_set, 'Transmitted beams'], 'Location', 'best');
     ylabel('Scalloping loss [dB]');
     xlabel('Shift [ratio beams separation]');
-    t = strcat('Scatterer point at ', num2str(mainP.pts_range(p),0), ...
-        'mm range, ', num2str(mainP.pts_theta(p),0), ' degrees from center');
+    t = strcat('Scatterer point at ', num2str(mainP.pts_range(p),0), 'mm range, ');
 %     title(t)
-    pause; close
+    if show_plots
+        pause
+    else
+        im_name = strcat('loss_shift_p', int2str(mainP.pts_range(p)), ...
+            '_', int2str(chosen_num_beams), '_', char(mainP.shift.type),...
+            '_', int2str(mainP.shift.direction));
+%         saveas(gcf, strcat('../images/fig/', im_name, '.fig'), 'fig')
+        saveas(gcf, strcat('../images/png/', im_name, '.png'), 'png')
+    end
 end
 
 % Max loss vs beams
-for p=1:length(mainP.pts_theta)
-    figure;
+for p=1:length(mainP.pts_range)
     pl = plot(mainP.num_beams, squeeze(loss_beams(p,:,:))', 'LineWidth', 2);
     grayscale_alpha = linspace(0,0.4,length(pl));
     for pidx=1:length(pl)
