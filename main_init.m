@@ -144,14 +144,14 @@ fprintf('\n============================================================\n')
 if ~exist('data_BF', 'var')
     fprintf('Beamforming all DA(S) images.\n')
     data_BF = cell([1, length(mainP.methods_set)]);
-    for m=1:length(mainP.methods_set)
+    parfor m=1:length(mainP.methods_set)
         bf_method = mainP.methods_set{m};
         fprintf('----------------------\n')
         fprintf('Beamforming method: %s.\n', bf_method)
         mstart = tic;
         
         m_BF = cell([1, length(mainP.num_beams)]);
-        parfor b=1:length(mainP.num_beams)
+        for b=1:length(mainP.num_beams)
             mainPs = copyStruct(mainP);
             mainPs.P = mainPs.copyP(mainPs.num_beams(b));
             b_DA = data_DA{b};

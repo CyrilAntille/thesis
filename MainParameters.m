@@ -41,7 +41,7 @@ classdef MainParameters
         % by phase shifting. Only IAA MB/MB Upsampled.
         
         save_all_data = false; % Can take multiple GB of memory
-        save_folder = '../data/'; % Will create directory if non-existing
+        save_folder = '../output/'; % Ref createOutputDir()
         % Multiprocessing might become an issue if little RAM space available.
         % For disable to work, must disable automatic creation of parallel pool
         % for parfor (in parallel preferences).
@@ -67,6 +67,52 @@ classdef MainParameters
                 num2str(obj.num_beams(end)) '_' ...
                 num2str(obj.shift_per_beam) speckle_name '.mat'];
             output_file = strcat(obj.save_folder, output_file);
+        end
+        function obj = createOutputDir(obj, save_plots)
+            if ~(obj.save_all_data || save_plots)
+                return
+            end
+            output_folder = datestr(datetime('now'),...
+                'yyyy-mm-dd_HH.MM.SS');
+            mkdir(obj.save_folder, output_folder)
+            obj.save_folder = strcat(obj.save_folder, output_folder, '/');
+            save(strcat(obj.save_folder, 'MainP.mat'), 'obj')
+            if save_plots
+                mkdir(obj.save_folder, 'png')
+            end
+
+            fid = fopen(strcat(obj.save_folder, 'MainP.txt'),'wt');
+            fprintf(fid, '==============================\n');
+            fields = fieldnames(obj);
+            for f=1:length(fields)
+                fname = fields{f};
+                fval = obj.(fname);
+                if isa(fval,'numeric')|| isa(fval,'logical')
+                    fval = num2str(fval);
+                    fprintf(fid, '%s\t\t%s\n', fname, fval);
+                elseif isa(fval,'cell')
+                    fprintf(fid, '%s\t\t%s', fname, fval{1});
+                    for v=2:length(fval)
+                        fprintf(fid, ', %s', fval{v});
+                    end
+                    fprintf(fid, ' \n');
+                elseif isa(fval,'Shift')
+                    fprintf(fid, '%s\n', fname);
+                    s_fields = fieldnames(fval);
+                    for s=1:length(s_fields)
+                        sname = s_fields{s};
+                        sval = fval.(sname);
+                        if isa(sval,'numeric')|| isa(sval,'logical')
+                            sval = num2str(sval);
+                        else
+                            sval = char(sval);
+                        end
+                        fprintf(fid, '\t%s\t\t%s\n', sname, sval);
+                    end
+                end
+            end
+            fprintf(fid, '==============================\n');
+            fclose(fid);
         end
     end
 end

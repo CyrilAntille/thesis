@@ -2,12 +2,30 @@
 clear all
 mainP = MainParameters();
 mainP.pts_range = [40, 50]; % Add a range (in mm) for each point
-mainP.shift = Shift(ShiftType.LinearVar, 1/30, -1, 90); % Ref Shift.m
-mainP.num_beams = 61; % can be a single value or list of values
+mainP.num_beams = 101; % can be a single value or list of values
+mainP.shift = Shift(ShiftType.LinearSpeed, 1, -1, -90);
+% mainP.shift = Shift(ShiftType.RadialVar, 1/2, -1, 0);
 mainP.shift_per_beam = true;
 
-show_plots = true; % If false, saves plots to .png file
+show_plots = false; % If false, saves plots to .png file
 grayscale_plots = false;
+mainP = mainP.createOutputDir(~show_plots);
+
+%% Test - scatterer points speed estimation in m/s
+time_frame = 0.2 * 1e-3 * mainP.num_beams(1); % s
+Ptest = mainP.copyP(mainP.num_beams(1));
+b_shift = Shift(mainP.shift.type, mainP.shift.val, ...
+                Ptest.Tx.NTheta, mainP.shift.direction);
+shifts = b_shift.getShifts(Ptest); % in degrees or m
+for p=1:length(mainP.pts_range)
+    if mainP.shift.type == ShiftType.RadialVar || ...
+            mainP.shift.type == ShiftType.RadialCst
+        shifts_p = sin(shifts) * mainP.pts_range(p) * 1e-3; % m (approx)
+    else
+        shifts_p = shifts; % m
+    end
+    points_speed = (shifts_p(end) - shifts_p(1)) / time_frame % m/s
+end
 
 %%
 main_init
@@ -148,7 +166,7 @@ for m=1:length(mainP.methods_set)
                 char(mainP.shift.type), '_', int2str(mainP.shift.direction),...
                 '_', mainP.methods_set{m});
     %         saveas(gcf, strcat('../images/fig/', im_name, '.fig'), 'fig')
-            saveas(gcf, strcat('../images/png/', im_name, '.png'), 'png')
+            saveas(gcf, strcat(mainP.save_folder, 'png/', im_name, '.png'), 'png')
         end
     end
 end

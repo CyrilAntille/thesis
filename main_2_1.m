@@ -3,11 +3,12 @@ clear all
 mainP = MainParameters();
 mainP.pts_range = [40, 50]; % Add a range (in mm) for each point
 mainP.shift = Shift(ShiftType.LinearCst, 2*1e-3, 3, 0); % Ref Shift.m
-mainP.num_beams = 61; % can be a single value or list of values
+mainP.num_beams = 101; % can be a single value or list of values
 mainP.shift_per_beam = false;
 
 show_plots = true; % If false, saves plots to .png file
 grayscale_plots = false;
+mainP = mainP.createOutputDir(~show_plots);
 
 %%
 main_init
@@ -117,8 +118,7 @@ for p=1:length(mainP.pts_range)
         im_name = strcat('loss_shift_p', int2str(mainP.pts_range(p)), ...
             '_', int2str(chosen_num_beams), '_', char(mainP.shift.type),...
             '_', int2str(mainP.shift.direction));
-%         saveas(gcf, strcat('../images/fig/', im_name, '.fig'), 'fig')
-        saveas(gcf, strcat('../images/png/', im_name, '.png'), 'png')
+        saveas(gcf, strcat(mainP.save_folder, 'png/', im_name, '.png'), 'png')
     end
 end
 
@@ -143,44 +143,52 @@ for p=1:length(mainP.pts_range)
         xlim([mainP.num_beams(1) mainP.num_beams(end)]) 
     end
 %     ylim([0 5])
-    pause; close
+    if show_plots
+        pause
+    else
+        im_name = strcat('loss_beams_p', int2str(mainP.pts_range(p)), ...
+            '_', char(mainP.shift.type), '_', int2str(mainP.shift.direction));
+        saveas(gcf, strcat(mainP.save_folder, 'png/', im_name, '.png'), 'png')
+    end
 end
 
 %% Beamformed images plots
-figure;
-for m=1:length(mainP.methods_set)
-    m_BF = data_BF{m};
-    for b=1:length(mainP.num_beams)
-        Pb = mainP.copyP(mainP.num_beams(b));
-        b_BF = m_BF{b};
-        b_DA = data_DA{b};
-        for s=1:mainP.shift.num_shifts
-            s_BF = b_BF{s};
-            s_DA = b_DA{s};
+if show_plots
+    figure;
+    for m=1:length(mainP.methods_set)
+        m_BF = data_BF{m};
+        for b=1:length(mainP.num_beams)
+            Pb = mainP.copyP(mainP.num_beams(b));
+            b_BF = m_BF{b};
+            b_DA = data_DA{b};
+            for s=1:mainP.shift.num_shifts
+                s_BF = b_BF{s};
+                s_DA = b_DA{s};
 
-            thetaRange = Pb.Tx.Theta;
-            if strcmp(mainP.methods_set(m),'IAA-MBMB-Upsampled')
-                thetaRange = linspace(Pb.Tx.Theta(1), Pb.Tx.Theta(end), ...
-                    mainP.upsample_number);
+                thetaRange = Pb.Tx.Theta;
+                if strcmp(mainP.methods_set(m),'IAA-MBMB-Upsampled')
+                    thetaRange = linspace(Pb.Tx.Theta(1), Pb.Tx.Theta(end), ...
+                        mainP.upsample_number);
+                end
+                warning('off')
+                [scanConvertedImage, Xs, Zs] = getScanConvertedImage(s_BF, ...
+                    thetaRange, 1e3 * s_DA.Radius, 2024, 2024, 'spline');
+                warning('on')
+                img = db(abs(scanConvertedImage));
+                imagesc(Xs, Zs, img)
+                xlabel('azimuth [mm]');
+
+    %             xlim([-15 15])
+    %             ylim([35 45])
+                caxis([-120  -70]);
+                colorbar
+                colormap(gray)
+                ylabel('range [mm]');
+                title(['Method :', mainP.methods_set{m}, ', No Beams: ', ...
+                    int2str(mainP.num_beams(b)), ', Shift No: ', int2str(s-1)])
+                pause
             end
-            warning('off')
-            [scanConvertedImage, Xs, Zs] = getScanConvertedImage(s_BF, ...
-                thetaRange, 1e3 * s_DA.Radius, 2024, 2024, 'spline');
-            warning('on')
-            img = db(abs(scanConvertedImage));
-            imagesc(Xs, Zs, img)
-            xlabel('azimuth [mm]');
-
-%             xlim([-15 15])
-%             ylim([35 45])
-            caxis([-120  -70]);
-            colorbar
-            colormap(gray)
-            ylabel('range [mm]');
-            title(['Method :', mainP.methods_set{m}, ', No Beams: ', ...
-                int2str(mainP.num_beams(b)), ', Shift No: ', int2str(s-1)])
-            pause
         end
     end
+    close
 end
-close

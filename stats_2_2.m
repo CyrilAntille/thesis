@@ -9,6 +9,7 @@ mainP.shift_per_beam = true;
 speeds = 0:0.5:3;
 
 show_plots = true; % If false, saves plots to .png file
+mainP = mainP.createOutputDir(~show_plots);
 
 %%
 pts_3dB_width = zeros([length(mainP.pts_range), length(mainP.num_beams),...
@@ -87,7 +88,7 @@ for p=1:size(pts_3dB_width, 1)
                 int2str(mainP.num_beams(b)), '_', char(mainP.shift.type),...
                 '_', int2str(mainP.shift.direction));
     %         saveas(gcf, strcat('../images/fig/', im_name, '.fig'), 'fig')
-            saveas(gcf, strcat('../images/png/', im_name, '.png'), 'png')
+            saveas(gcf, strcat(mainP.save_folder, 'png/', im_name, '.png'), 'png')
         end
     end
 end
