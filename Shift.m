@@ -7,13 +7,21 @@ classdef Shift
         direction = 0; % Motion direction, in degrees.
         % Values must be between -180 and 180 degrees. 0 = left to right
         % motion, 90 = moving away from array, 180 (=-180) = right to left.
+        stop_and_go_ratio = 1; % 'number of beams' per shift
+        % If stop_and_go_ratio = 1, then the motion is continuous.
+        % If > 1, then stop-and-go. Example: = 3 -> shift once every 3
+        % beams. Note that the shift is of the same value as if continuous.
     end
     methods
-        function obj = Shift(type, val, num_shift, direction)
+        function obj = Shift(type, val, num_shift, direction, stop_and_go_ratio)
+            if nargin == 4
+                stop_and_go_ratio = 1;
+            end
             obj.type = type;
             obj.val = val;
             obj.num_shifts = num_shift;
             obj.direction = direction;
+            obj.stop_and_go_ratio = stop_and_go_ratio;
         end
         function shifts = getShifts(obj, P)
             shift_val = obj.val;
@@ -30,6 +38,13 @@ classdef Shift
 %             shifts = (0:obj.num_shifts-1) * shift_val;
             shifts = (-floor(obj.num_shifts/2):floor(obj.num_shifts/2))...
                 * shift_val;
+            % stop-and-go
+            for s=1:length(shifts)
+                stop_rem = mod(s-1, obj.stop_and_go_ratio);
+                if stop_rem > 0
+                    shifts(s) = shifts(s - stop_rem);
+                end
+            end
         end
         function s_phantom = shiftPositions(obj, phantom, shift_val)
             % Note: - shift_val = shift from right to left (+ from left...)

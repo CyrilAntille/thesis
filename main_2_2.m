@@ -3,8 +3,8 @@ clear all
 mainP = MainParameters();
 mainP.pts_range = [40, 50]; % Add a range (in mm) for each point
 mainP.num_beams = 101; % can be a single value or list of values
-mainP.shift = Shift(ShiftType.LinearSpeed, 1, -1, -90);
-% mainP.shift = Shift(ShiftType.RadialVar, 1/2, -1, 0);
+% mainP.shift = Shift(ShiftType.LinearSpeed, 1, -1, -180);
+mainP.shift = Shift(ShiftType.RadialVar, 1/2, -1, 0, 3);
 mainP.shift_per_beam = true;
 
 show_plots = false; % If false, saves plots to .png file
