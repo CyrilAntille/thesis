@@ -22,7 +22,7 @@ function Data = CalcRespAll(P,Phantom)
 %   end
 
   %% Init Field II. 
-  set_field('fs',P.fs);
+  evalc('set_field(''fs'',P.fs)');
   set_field('c',P.c);
   % set_field('use_triangles',1);
   

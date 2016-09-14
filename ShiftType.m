@@ -12,4 +12,17 @@ classdef ShiftType
         LinearSpeed % in meters/seconds
         LinearSpeedFrame % Same as LateralSpeed multiplied by num beams
     end
+    methods(Static)
+        function unit = getShiftTypeUnit(type)
+            unit = 'beam distance ratio / shift';
+            if type == ShiftType.LinearSpeed || ...
+                    type == ShiftType.LinearSpeedFrame
+                unit = 'meter/second';
+            elseif type == ShiftType.LinearCst
+                unit = 'meter/shift';
+            elseif type == ShiftType.RadialCst
+                unit = 'radian/shift';
+            end
+        end
+    end
 end

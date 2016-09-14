@@ -6,9 +6,9 @@ mainP.shift = Shift(ShiftType.LinearCst, 2*1e-3, 3, 0); % Ref Shift.m
 mainP.num_beams = 101; % can be a single value or list of values
 mainP.shift_per_beam = false;
 
-show_plots = true; % If false, saves plots to .png file
+mainP.save_plots = false;
 grayscale_plots = false;
-mainP = mainP.createOutputDir(~show_plots);
+mainP = mainP.createOutputDir();
 
 %%
 main_init
@@ -81,10 +81,10 @@ if grayscale_plots
     line_clr = [0,0,0]+0.6;
 end
 
-if show_plots
-    figure;
-else
+if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+else
+    figure;
 end
 % Loss vs shift
 for p=1:length(mainP.pts_range)
@@ -112,13 +112,14 @@ for p=1:length(mainP.pts_range)
     xlabel('Shift [ratio beams separation]');
     t = strcat('Scatterer point at ', num2str(mainP.pts_range(p),0), 'mm range, ');
 %     title(t)
-    if show_plots
-        pause
-    else
+
+    if mainP.save_plots
         im_name = strcat('loss_shift_p', int2str(mainP.pts_range(p)), ...
             '_', int2str(chosen_num_beams), '_', char(mainP.shift.type),...
             '_', int2str(mainP.shift.direction));
         saveas(gcf, strcat(mainP.save_folder, 'png/', im_name, '.png'), 'png')
+    else
+        pause
     end
 end
 
@@ -143,17 +144,17 @@ for p=1:length(mainP.pts_range)
         xlim([mainP.num_beams(1) mainP.num_beams(end)]) 
     end
 %     ylim([0 5])
-    if show_plots
-        pause
-    else
+    if mainP.save_plots
         im_name = strcat('loss_beams_p', int2str(mainP.pts_range(p)), ...
             '_', char(mainP.shift.type), '_', int2str(mainP.shift.direction));
         saveas(gcf, strcat(mainP.save_folder, 'png/', im_name, '.png'), 'png')
+    else
+        pause
     end
 end
 
 %% Beamformed images plots
-if show_plots
+if ~mainP.save_plots
     figure;
     for m=1:length(mainP.methods_set)
         m_BF = data_BF{m};
@@ -192,3 +193,4 @@ if show_plots
     end
     close
 end
+fprintf('Main_2_1 finished!')

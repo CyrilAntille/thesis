@@ -41,6 +41,7 @@ classdef MainParameters
         % by phase shifting. Only IAA MB/MB Upsampled.
         
         save_all_data = false; % Can take multiple GB of memory
+        save_plots = false; % If false, will display them instead
         save_folder = '../output/'; % Ref createOutputDir()
         % Multiprocessing might become an issue if little RAM space available.
         % For disable to work, must disable automatic creation of parallel pool
@@ -68,8 +69,8 @@ classdef MainParameters
                 num2str(obj.shift_per_beam) speckle_name '.mat'];
             output_file = strcat(obj.save_folder, output_file);
         end
-        function obj = createOutputDir(obj, save_plots)
-            if ~(obj.save_all_data || save_plots)
+        function obj = createOutputDir(obj)
+            if ~(obj.save_all_data || obj.save_plots)
                 return
             end
             output_folder = datestr(datetime('now'),...
@@ -77,7 +78,7 @@ classdef MainParameters
             mkdir(obj.save_folder, output_folder)
             obj.save_folder = strcat(obj.save_folder, output_folder, '/');
             save(strcat(obj.save_folder, 'MainP.mat'), 'obj')
-            if save_plots
+            if obj.save_plots
                 mkdir(obj.save_folder, 'png')
             end
 

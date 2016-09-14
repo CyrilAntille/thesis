@@ -6,7 +6,10 @@ if ~exist('mainP', 'var')
 end
 
 %% 1. FieldII initialization and Speckle raw data creation
-field_init(0);
+fprintf('============================================================\n')
+fprintf('Initializing Field II for main process.\n')
+% field_init(0);
+evalc('field_init(0)');
 
 if mainP.speckle_create && ~exist('speckle_raw', 'var')
     fprintf('Creating raw speckle image. \n')
@@ -25,7 +28,6 @@ if mainP.speckle_create && ~exist('speckle_raw', 'var')
 elseif mainP.speckle_load && ~exist('speckle_raw', 'var')
     load(mainP.speckle_file)
 end
-fprintf('\n============================================================\n')
 
 if ~exist('speckle_raw', 'var')
     speckle_raw_image = [];
@@ -44,10 +46,9 @@ else
     end
     pool = gcp;
 end
-parfor w=1:pool.NumWorkers
-    field_init(0);
-end
-fprintf('\n============================================================\n')
+f = parfevalOnAll(pool,@field_init,0,0);
+wait(f);
+fprintf('============================================================\n')
 
 %% 2. Create raw and DA(S) data with point scatterers
 if ~exist('data_DA', 'var')
@@ -69,7 +70,7 @@ if ~exist('data_DA', 'var')
     data_DA = cell([1, length(mainP.num_beams)]);
     for b=1:length(mainP.num_beams)
         Pb = mainP.copyP(mainP.num_beams(b));
-        fprintf('\nNTheta: %d.\n', Pb.Tx.NTheta)
+        fprintf('NTheta: %d.\n', Pb.Tx.NTheta)
         nstart = tic;
         
         if mainP.shift_per_beam
@@ -81,6 +82,8 @@ if ~exist('data_DA', 'var')
             b_phantoms = cell([1, b_shift.num_shifts]);
         end
         
+        fprintf('Progress:\n');
+        fprintf([repmat('.',1,b_shift.num_shifts) '\n\n']);
         b_DA = cell([1, b_shift.num_shifts]);
         shifts = b_shift.getShifts(Pb);
         parfor s=1:b_shift.num_shifts
@@ -104,6 +107,7 @@ if ~exist('data_DA', 'var')
             end
             % DA(S)
             b_DA{s} = BeamformAll(Ps, s_raw);
+            fprintf('\b|\n');
         end
         if mainP.shift_per_beam
             % Need to merge beamformed images into a single one.
@@ -124,7 +128,7 @@ if ~exist('data_DA', 'var')
             data_phantoms{b} = b_phantoms;
         end
         nend = toc(nstart);
-        fprintf('\nNTheta: %d. Time: %d minutes and %f seconds', ...
+        fprintf('NTheta: %d. Time: %d minutes and %0.0f seconds\n', ...
             Pb.Tx.NTheta, floor(nend/60), rem(nend,60))
     end
     if mainP.save_all_data
@@ -135,10 +139,9 @@ if ~exist('data_DA', 'var')
     end
 end
 field_end();
-parfor w=1:pool.NumWorkers
-    field_end();
-end
-fprintf('\n============================================================\n')
+f = parfevalOnAll(pool,@field_end,0);
+wait(f);
+fprintf('============================================================\n')
 
 %% 3. Beamform data: DAS, MV, IAA
 if ~exist('data_BF', 'var')
@@ -156,11 +159,11 @@ if ~exist('data_BF', 'var')
             mainPs.P = mainPs.copyP(mainPs.num_beams(b));
             b_DA = data_DA{b};
             if mainP.shift_per_beam
-                b_BF = ComputeBF(b_DA.image, mainPs, bf_method);
+                b_BF = ComputeBF(b_DA.image, mainPs, bf_method, 0);
             else
                 b_BF = cell([1, mainPs.shift.num_shifts]);
                 for s=1:mainPs.shift.num_shifts
-                    b_BF{s} = ComputeBF(b_DA{s}.image, mainPs, bf_method);
+                    b_BF{s} = ComputeBF(b_DA{s}.image, mainPs, bf_method, 0);
                 end
             end
             m_BF{b} = b_BF;
@@ -176,6 +179,6 @@ if ~exist('data_BF', 'var')
         save(output_file, 'data_BF', '-append')
     end
 end
-fprintf('\n============================================================\n')
+fprintf('============================================================\n')
 fprintf('main_init finished!\n')
 

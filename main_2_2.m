@@ -1,15 +1,16 @@
 %% 2.2: Motion between beams
-clear all
-mainP = MainParameters();
-mainP.pts_range = [40, 50]; % Add a range (in mm) for each point
-mainP.num_beams = 101; % can be a single value or list of values
-% mainP.shift = Shift(ShiftType.LinearSpeed, 1, -1, -180);
-mainP.shift = Shift(ShiftType.RadialVar, 1/2, -1, 0, 3);
-mainP.shift_per_beam = true;
-
-show_plots = false; % If false, saves plots to .png file
-grayscale_plots = false;
-mainP = mainP.createOutputDir(~show_plots);
+% clear all
+if ~exist('mainP', 'var')
+    mainP = MainParameters();
+    mainP.pts_range = [40, 50]; % Add a range (in mm) for each point
+    mainP.num_beams = 303; % can be a single value or list of values
+%     mainP.shift = Shift(ShiftType.LinearSpeed, 1, -1, -90);
+    mainP.shift = Shift(ShiftType.RadialVar, 1/2, -1, 0, 3);
+    mainP.shift_per_beam = true;
+    mainP.save_plots = false;
+    
+    mainP = mainP.createOutputDir();
+end
 
 %% Test - scatterer points speed estimation in m/s
 time_frame = 0.2 * 1e-3 * mainP.num_beams(1); % s
@@ -24,7 +25,7 @@ for p=1:length(mainP.pts_range)
     else
         shifts_p = shifts; % m
     end
-    points_speed = (shifts_p(end) - shifts_p(1)) / time_frame % m/s
+    points_speed = (shifts_p(end) - shifts_p(1)) / time_frame; % m/s
 end
 
 %%
@@ -34,9 +35,9 @@ main_init
 
 max_peak_DAS = 0;
 pts_3dB = cell([length(mainP.pts_range), ...
-    length(mainP.methods_set), length(mainP.num_beams)]);
+    length(mainP.num_beams), length(mainP.methods_set)]);
 inters_3dB = cell([length(mainP.pts_range), ...
-    length(mainP.methods_set), length(mainP.num_beams)]);
+    length(mainP.num_beams), length(mainP.methods_set)]);
 for m=1:length(mainP.methods_set)
     m_BF = data_BF{m};
     for b=1:length(mainP.num_beams)
@@ -69,8 +70,8 @@ for m=1:length(mainP.methods_set)
             else
                 p_width = p_x(2) - p_x(1);
             end
-            pts_3dB{p,m,b} = [pdb(1), p_width];
-            inters_3dB{p,m,b} = p_x;
+            pts_3dB{p,b,m} = [pdb(1), p_width];
+            inters_3dB{p,b,m} = p_x;
         end
     end
 end
@@ -81,10 +82,11 @@ linestyle_list = {'-.','--','-',':'};
 markers_list = {'+','x','diamond','o'};
 colors_list = {'b','r','g','k','m','y'};
 
-if show_plots
-    figure;
-else
+
+if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+else
+    figure;
 end
 max_peak_DAS = 0; max_peak_DAS_img = 0;
 for m=1:length(mainP.methods_set)
@@ -138,18 +140,18 @@ for m=1:length(mainP.methods_set)
             plot(thetaRange, p_bp, colors_list{p}, 'LineWidth', 2, ...
                 'LineStyle', linestyle_list{p}, 'Marker', markers_list{p});
             
-            p_y = pts_3dB{p,m,b}(1) - 3;
+            p_y = pts_3dB{p,b,m}(1) - 3;
             p_title = strcat('P', int2str(p), '-', ...
                 int2str(data_phantoms.positions(p,3)*1000), 'mm range');
-            line('XData', inters_3dB{p,m,b}, 'YData', [p_y p_y], ...
+            line('XData', inters_3dB{p,b,m}, 'YData', [p_y p_y], ...
                 'LineWidth', 2, 'LineStyle', '-', 'Color', [0,0,0]+0.4)
             p_l = strcat('P', int2str(p), '-3dB width= ', ...
-                num2str(pts_3dB{p,m,b}(2), 3), ' degrees');
+                num2str(pts_3dB{p,b,m}(2), 3), ' degrees');
             
             pl_legend{end+1} = p_title;
             pl_legend{end+1} = p_l;
-            x_min = min([x_min, inters_3dB{p,m,b}(1)]);
-            x_max = max([x_max, inters_3dB{p,m,b}(2)]);
+            x_min = min([x_min, inters_3dB{p,b,m}(1)]);
+            x_max = max([x_max, inters_3dB{p,b,m}(2)]);
             y_min = min([y_min, p_y]);
         end
         xlim([x_min-1, x_max+1])
@@ -159,21 +161,22 @@ for m=1:length(mainP.methods_set)
         legend(pl_legend, 'Location', 'best');
         hold off;
         
-        if show_plots
-            pause
-        else
+        
+        if mainP.save_plots
             im_name = strcat(int2str(mainP.num_beams(b)), '_', ...
                 char(mainP.shift.type), '_', int2str(mainP.shift.direction),...
-                '_', mainP.methods_set{m});
+                '_', num2str(mainP.shift.val,2), '_', mainP.methods_set{m});
     %         saveas(gcf, strcat('../images/fig/', im_name, '.fig'), 'fig')
             saveas(gcf, strcat(mainP.save_folder, 'png/', im_name, '.png'), 'png')
+        else
+            pause
         end
     end
 end
 close
-fprintf('\nMain_2_2 finished!\n')
+
 %% Beamformed images plots
-if show_plots
+if ~mainP.save_plots
     figure;
     for m=1:length(mainP.methods_set)
         m_BF = data_BF{m};
@@ -207,3 +210,4 @@ if show_plots
     end
     close
 end
+fprintf('Main_2_2 finished!\n')
