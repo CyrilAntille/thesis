@@ -160,10 +160,12 @@ if ~exist('data_BF', 'var')
             b_DA = data_DA{b};
             if mainP.shift_per_beam
                 b_BF = ComputeBF(b_DA.image, mainPs, bf_method, 0);
+                b_BF = normalizeBFImage(b_BF, b_DA.Radius*1000);
             else
                 b_BF = cell([1, mainPs.shift.num_shifts]);
                 for s=1:mainPs.shift.num_shifts
                     b_BF{s} = ComputeBF(b_DA{s}.image, mainPs, bf_method, 0);
+                    b_BF{s} = normalizeBFImage(b_BF{s}, b_DA.Radius*1000);
                 end
             end
             m_BF{b} = b_BF;

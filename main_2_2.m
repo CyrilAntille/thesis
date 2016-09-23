@@ -3,9 +3,9 @@
 if ~exist('mainP', 'var')
     mainP = MainParameters();
     mainP.pts_range = [40, 50]; % Add a range (in mm) for each point
-    mainP.num_beams = 303; % can be a single value or list of values
+    mainP.num_beams = 101; % can be a single value or list of values
 %     mainP.shift = Shift(ShiftType.LinearSpeed, 1, -1, -90);
-    mainP.shift = Shift(ShiftType.RadialVar, 1/2, -1, 0, 3);
+    mainP.shift = Shift(ShiftType.RadialVar, 0, -1, 0, 1);
     mainP.shift_per_beam = true;
     mainP.save_plots = false;
     
@@ -32,8 +32,6 @@ end
 main_init
 
 %% 3dB width computations
-
-max_peak_DAS = 0;
 pts_3dB = cell([length(mainP.pts_range), ...
     length(mainP.num_beams), length(mainP.methods_set)]);
 inters_3dB = cell([length(mainP.pts_range), ...
@@ -44,9 +42,6 @@ for m=1:length(mainP.methods_set)
         Pb = mainP.copyP(mainP.num_beams(b));
         b_BF = m_BF{b};
         b_DA = data_DA{b};
-        if m == 1
-            max_peak_DAS = max(db(abs(b_BF(:))));
-        end
 
         thetaRange = Pb.Tx.Theta;
         if strcmp(mainP.methods_set(m),'IAA-MBMB-Upsampled')
@@ -54,7 +49,7 @@ for m=1:length(mainP.methods_set)
         end
         
         thetaRange = rad2deg(thetaRange);
-        bf_img = db(b_BF)  - max_peak_DAS;
+        bf_img = db(b_BF);
         for p=1:length(mainP.pts_range)
             p_range = mainP.pts_range(p); % range not constant if LateralShift
             minr = find(b_DA.Radius >= (p_range - 2)*1e-3, 1);
@@ -67,6 +62,10 @@ for m=1:length(mainP.methods_set)
                 thetaRange, p_3dbline, 1);
             if length(p_x) < 2
                 p_width = NaN;
+            elseif length(p_x) > 2
+                p_x2 = max(find(p_x >= pdeg(1), 1), 2);
+                p_width = p_x(p_x2) - p_x(p_x2-1);
+                p_x = p_x(p_x2-1:p_x2);
             else
                 p_width = p_x(2) - p_x(1);
             end
@@ -81,7 +80,6 @@ end
 linestyle_list = {'-.','--','-',':'};
 markers_list = {'+','x','diamond','o'};
 colors_list = {'b','r','g','k','m','y'};
-
 
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
@@ -107,16 +105,9 @@ for m=1:length(mainP.methods_set)
         warning('on')
         img = db(abs(scanConvertedImage));
         
-        if m == 1
-            max_peak_DAS = max(db(abs(b_BF(:))));
-            max_peak_DAS_img = max(img(:));
-        end
-        
         cla(); subplot(1,2,1)
-        imagesc(Xs, Zs, img - max_peak_DAS_img)
-        caxis([-50  0]);
-%         imagesc(Xs, Zs, img)
-%         caxis([-120  -70]);
+        imagesc(Xs, Zs, img)
+        caxis([-25  25]);
         xlim([-20 20])
         ylim([min(mainP.pts_range)-5 max(mainP.pts_range)+5])
         colorbar
@@ -128,10 +119,10 @@ for m=1:length(mainP.methods_set)
 
         
         subplot(1,2,2); hold on
-        bf_img = db(b_BF) - max_peak_DAS;
+        bf_img = db(abs(b_BF));
         thetaRange = rad2deg(thetaRange);
         pl_legend = {};
-        y_min = Inf; x_min = Inf; x_max = -Inf;
+        y_min = Inf; y_max = -Inf; x_min = Inf; x_max = -Inf;
         for p=1:length(mainP.pts_range)
             p_range = mainP.pts_range(p); % range not constant if LateralShift
             minr = find(b_DA.Radius >= (p_range - 2)*1e-3, 1);
@@ -153,9 +144,10 @@ for m=1:length(mainP.methods_set)
             x_min = min([x_min, inters_3dB{p,b,m}(1)]);
             x_max = max([x_max, inters_3dB{p,b,m}(2)]);
             y_min = min([y_min, p_y]);
+            y_max = max([y_max, pts_3dB{p,b,m}(1)]);
         end
         xlim([x_min-1, x_max+1])
-        ylim([y_min-3 0])
+        ylim([y_min-3 y_max])
         xlabel('angle [deg]');
         ylabel('gain [dB]');
         legend(pl_legend, 'Location', 'best');
@@ -199,7 +191,7 @@ if ~mainP.save_plots
             xlabel('azimuth [mm]');
     %             xlim([-15 15])
     %             ylim([35 45])
-            caxis([-120  -70]);
+%             caxis([-120  -70]);
             colorbar
             colormap(gray)
             ylabel('range [mm]');
