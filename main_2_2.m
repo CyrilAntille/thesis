@@ -7,7 +7,7 @@ if ~exist('mainP', 'var')
     mainP.shift = Shift(ShiftType.LinearSpeed, 1, -1, 90, 1);
 %     mainP.shift = Shift(ShiftType.RadialVar, 7/8, -1, 0, 1);
     mainP.shift_per_beam = true;
-    mainP.save_plots = false;
+    mainP.save_plots = true;
     
     mainP = mainP.createOutputDir();
 end
@@ -85,7 +85,6 @@ if mainP.save_plots
 else
     figure;
 end
-max_peak_DAS = 0; max_peak_DAS_img = 0;
 for m=1:length(mainP.methods_set)
     m_BF = data_BF{m};
     for b=1:length(mainP.num_beams)
@@ -167,6 +166,78 @@ for m=1:length(mainP.methods_set)
     end
 end
 close
+
+
+%% Points contour plots
+if mainP.save_plots
+    set(0, 'DefaultFigureVisible', 'off')
+else
+    set(0, 'DefaultFigureVisible', 'on')
+end
+figs = [];
+for p=1:length(mainP.pts_range)
+    figs(end+1) = figure(p);
+end
+
+for b=1:length(mainP.num_beams)
+    for m=1:length(mainP.methods_set)
+        Pb = mainP.copyP(mainP.num_beams(b));
+        b_BF = data_BF{m}{b};
+        b_DA = data_DA{b};
+
+        thetaRange = Pb.Tx.Theta;
+        if strcmp(mainP.methods_set(m),'IAA-MBMB-Upsampled')
+            thetaRange = linspace(Pb.Tx.Theta(1), Pb.Tx.Theta(end), ...
+                mainP.upsample_number);
+        end
+        warning('off')
+        [scanConvertedImage, Xs, Zs] = getScanConvertedImage(b_BF, ...
+            thetaRange, 1e3 * b_DA.Radius, 2024, 2024, 'spline');
+        warning('on')
+        img = db(abs(scanConvertedImage));
+        
+        for p=1:length(mainP.pts_range)
+            p_range = mainP.pts_range(p);
+            
+            if p_range == mainP.P.Tx.FocRad * 1000
+                max_az = 1.5 + cosd(mainP.shift.direction);
+            else
+                max_az = 3 + 2 * cosd(mainP.shift.direction);
+            end
+            max_r = 0.5 + abs(sind(mainP.shift.direction));
+            
+            minXs = find(Xs >= -max_az, 1);
+            maxXs = find(Xs >= max_az, 1);
+            pXs = Xs(minXs:maxXs);
+            minZs = find(Zs >= p_range-max_r, 1);
+            maxZs = find(Zs >=p_range+max_r, 1);
+            pZs = Zs(minZs:maxZs);
+            p_img = img(minZs:maxZs, minXs:maxXs);
+            
+            set(0, 'currentfigure', figs(p));
+            subplot(2,ceil(length(mainP.methods_set)/2),m);
+            contourf(pXs, pZs, p_img, [-100, 15, pts_3dB{p,b,m}(1)-3], ...
+                'ShowText','on');
+            set(gca,'YDir','Reverse')
+            xlabel('azimuth [mm]');
+            ylabel('range [mm]');
+            title(mainP.methods_set{m});
+        end
+    end
+    if mainP.save_plots
+        im_name = strcat(int2str(mainP.num_beams(b)), '_', ...
+            char(mainP.shift.type), '_', int2str(mainP.shift.direction),...
+            '_', num2str(mainP.shift.val,2), '_p');
+        for p=1:length(mainP.pts_range)
+            p_name = strcat(im_name, int2str(mainP.pts_range(p)), 'mm');
+            saveas(figs(p), strcat(mainP.save_folder, 'png/', p_name, '.png'), 'png')
+        end
+    else
+        pause
+    end
+end
+close all
+set(0, 'DefaultFigureVisible', 'on')
 
 %% Beamformed images plots
 if ~mainP.save_plots
