@@ -2,7 +2,7 @@
 clear all
 mainP = MainParameters();
 mainP.pts_range = [40, 50]; % Add a range (in mm) for each point
-mainP.shift = Shift(ShiftType.LinearCst, 2*1e-3, 3, 0); % Ref Shift.m
+mainP.shift = Shift(ShiftType.LinearCst, 2*1e-3, 4, 90); % Ref Shift.m
 mainP.num_beams = 101; % can be a single value or list of values
 mainP.shift_per_beam = false;
 
@@ -26,8 +26,8 @@ loss_shift = zeros([length(mainP.pts_range) ...
 
 for m=1:length(mainP.methods_set)
     m_BF = data_BF{m};
-    fprintf('----------------------\n')
-    fprintf('Beamforming method: %s.\n', mainP.methods_set{m})
+%     fprintf('----------------------\n')
+%     fprintf('Beamforming method: %s.\n', mainP.methods_set{m})
     for b=1:length(mainP.num_beams)
         b_BF = m_BF{b};
         b_DA = data_DA{b};
@@ -181,7 +181,8 @@ if ~mainP.save_plots
 
     %             xlim([-15 15])
     %             ylim([35 45])
-                caxis([-120  -70]);
+%                 caxis([-120  -70]);
+                caxis([-25  25]);
                 colorbar
                 colormap(gray)
                 ylabel('range [mm]');

@@ -2,10 +2,10 @@
 % clear all
 if ~exist('mainP', 'var')
     mainP = MainParameters();
-    mainP.pts_range = [40, 50]; % Add a range (in mm) for each point
+    mainP.pts_range = [40 50]; % Add a range (in mm) for each point
     mainP.num_beams = 101; % can be a single value or list of values
-%     mainP.shift = Shift(ShiftType.LinearSpeed, 1, -1, -90);
-    mainP.shift = Shift(ShiftType.RadialVar, 0, -1, 0, 1);
+    mainP.shift = Shift(ShiftType.LinearSpeed, 1, -1, 90, 1);
+%     mainP.shift = Shift(ShiftType.RadialVar, 7/8, -1, 0, 1);
     mainP.shift_per_beam = true;
     mainP.save_plots = false;
     
@@ -55,8 +55,7 @@ for m=1:length(mainP.methods_set)
             minr = find(b_DA.Radius >= (p_range - 2)*1e-3, 1);
             maxr = find(b_DA.Radius >= (p_range + 2)*1e-3, 1);
             p_bp = max(bf_img(minr:maxr, :), [], 1);
-            [pdb, pdeg] = findpeaks(p_bp, thetaRange, ...
-                'SortStr','descend');
+            [pdb, pdeg] = findpeaks(p_bp, thetaRange, 'SortStr','descend');
             p_3dbline = ones(size(thetaRange)) .* (pdb(1) - 3);
             [p_x, p_y, ~, ~] = intersections(thetaRange, p_bp, ...
                 thetaRange, p_3dbline, 1);
@@ -105,7 +104,7 @@ for m=1:length(mainP.methods_set)
         warning('on')
         img = db(abs(scanConvertedImage));
         
-        cla(); subplot(1,2,1)
+        clf(); subplot(1,2,1)
         imagesc(Xs, Zs, img)
         caxis([-25  25]);
         xlim([-20 20])
@@ -134,17 +133,19 @@ for m=1:length(mainP.methods_set)
             p_y = pts_3dB{p,b,m}(1) - 3;
             p_title = strcat('P', int2str(p), '-', ...
                 int2str(data_phantoms.positions(p,3)*1000), 'mm range');
-            line('XData', inters_3dB{p,b,m}, 'YData', [p_y p_y], ...
-                'LineWidth', 2, 'LineStyle', '-', 'Color', [0,0,0]+0.4)
-            p_l = strcat('P', int2str(p), '-3dB width= ', ...
-                num2str(pts_3dB{p,b,m}(2), 3), ' degrees');
-            
             pl_legend{end+1} = p_title;
-            pl_legend{end+1} = p_l;
-            x_min = min([x_min, inters_3dB{p,b,m}(1)]);
-            x_max = max([x_max, inters_3dB{p,b,m}(2)]);
-            y_min = min([y_min, p_y]);
-            y_max = max([y_max, pts_3dB{p,b,m}(1)]);
+            if length(inters_3dB{p,b,m}) == 2
+                line('XData', inters_3dB{p,b,m}, 'YData', [p_y p_y], ...
+                    'LineWidth', 2, 'LineStyle', '-', 'Color', [0,0,0]+0.4)
+                p_l = strcat('P', int2str(p), '-3dB width= ', ...
+                    num2str(pts_3dB{p,b,m}(2), 3), ' degrees');
+
+                pl_legend{end+1} = p_l;
+                x_min = min([x_min, inters_3dB{p,b,m}(1)]);
+                x_max = max([x_max, inters_3dB{p,b,m}(2)]);
+                y_min = min([y_min, p_y]);
+                y_max = max([y_max, pts_3dB{p,b,m}(1)]);
+            end
         end
         xlim([x_min-1, x_max+1])
         ylim([y_min-3 y_max])
@@ -191,7 +192,7 @@ if ~mainP.save_plots
             xlabel('azimuth [mm]');
     %             xlim([-15 15])
     %             ylim([35 45])
-%             caxis([-120  -70]);
+            caxis([-25  25]);
             colorbar
             colormap(gray)
             ylabel('range [mm]');

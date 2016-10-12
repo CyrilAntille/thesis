@@ -4,6 +4,8 @@ classdef MainParameters
     properties
         % Array and medium parameters
         P = Parameters();
+        medium_range = [35, 60] % mm
+        % medium_range should start P.MinRadImage (35mm)
         
         % Speckle raw image creation parameters
         speckle_create = false;
@@ -16,7 +18,7 @@ classdef MainParameters
         speckle_file = '..\data\2_1_speckle_2_10-6.mat';
         % Speckle noise is added to the beamformed image if the speckle raw
         % image (speckle_raw) exists in the workspace (so most of the times
-        % if speckle_create or speckle_load are true
+        % if speckle_create or speckle_load are true)
         
         % raw and DA(S) image creation parameters
         pts_range = [40]; % Add a range (in mm) for each point
@@ -62,7 +64,7 @@ classdef MainParameters
             % Example: 61_211_0_speckle2.mat
             speckle_name = '_noSpeckle';
             if used_speckle
-                speckle_name = ['_speckle' num2str(obj.P.Seed)];
+                speckle_name = ['_speckle' num2str(obj.speckle_seed)];
             end
             output_file = [num2str(obj.num_beams(1)) '_' ...
                 num2str(obj.num_beams(end)) '_' ...

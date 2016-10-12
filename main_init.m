@@ -26,13 +26,18 @@ if mainP.speckle_create && ~exist('speckle_raw', 'var')
         save(output_file, 'mainP', 'speckle_raw', 'speckle_phantom', '-v7.3')
     end
 elseif mainP.speckle_load && ~exist('speckle_raw', 'var')
-    load(mainP.speckle_file)
+    load(mainP.speckle_file, 'speckle_raw')
 end
 
-if ~exist('speckle_raw', 'var')
-    speckle_raw_image = [];
+if exist('speckle_raw', 'var')
+    resh_speckle = reshapeRawImg(mainP, speckle_raw);
+    speckle_raw_image = resh_speckle.image;
 else
-    speckle_raw_image = speckle_raw.image;
+%     speckle_raw_image = speckle_raw.image;
+    mock_speckle = struct; mock_speckle.times = 0;
+    mock_speckle.image = []; mock_speckle.LConvs = 0;
+    mock_speckle = reshapeRawImg(mainP, mock_speckle);
+    speckle_raw_image = mock_speckle.image; % zero valued image
 end
 % speckle_raw_image is created to avoid copying the whole speckle_raw
 % structure when running parallel loops.
@@ -59,7 +64,7 @@ if ~exist('data_DA', 'var')
         scat_pts(pidx, :) = [sind(pts_angle) 0 cosd(pts_angle)] ...
             * mainP.pts_range(pidx) * 1e-3;
     end
-    original_phantom = PointPhantom(scat_pts, 1+db2mag(30));
+    original_phantom = PointPhantom(scat_pts, 1+db2mag(40));
     % -> pts 30dB over speckle
     
     if mainP.shift_per_beam
@@ -90,15 +95,10 @@ if ~exist('data_DA', 'var')
             % Raw
             s_phantom = b_shift.shiftPositions(original_phantom, shifts(s));
             s_raw = CalcRespAll(Pb, s_phantom);
-            if ~isempty(speckle_raw_image)
-                new_image = speckle_raw_image;
-                new_image(1:size(s_raw.image),:) = ...
-                    new_image(1:size(s_raw.image),:) + s_raw.image;
-                s_raw.image = new_image;
-                %TODO: Maybe always include focus range to image!
-            end
+            s_raw = reshapeRawImg(mainP, s_raw);
+            s_raw.image = s_raw.image + speckle_raw_image;
             if mainP.shift_per_beam
-                Ps = mainP.copyP(1);
+                Ps = copyStruct(Pb); Ps.Tx.NTheta = 1;
                 Ps.Tx.SinTheta = - Ps.Tx.SinThMax + beam_shift * (s-1);
                 Ps.Tx.Theta = asin(Ps.Tx.SinTheta);
             else
@@ -113,22 +113,27 @@ if ~exist('data_DA', 'var')
             % Need to merge beamformed images into a single one.
             n_DA = b_DA{1};
             for s=2:b_shift.num_shifts
-                radius_length = length(b_DA{s}.Radius); % This number may vary
-                if length(n_DA.Radius) > radius_length
-                    n_DA.image = n_DA.image(:,1:radius_length,:);
-                    n_DA.Radius = b_DA{s}.Radius;
-                elseif radius_length > length(n_DA.Radius)
-                    b_DA{s}.image = b_DA{s}.image(:,1:length(n_DA.Radius),:);
-                end
                 n_DA.image = vertcat(n_DA.image, b_DA{s}.image);
             end
+
+%             n_DA = b_DA{1};
+%             for s=2:b_shift.num_shifts
+%                 radius_length = length(b_DA{s}.Radius); % This number may vary
+%                 if length(n_DA.Radius) > radius_length
+%                     n_DA.image = n_DA.image(:,1:radius_length,:);
+%                     n_DA.Radius = b_DA{s}.Radius;
+%                 elseif radius_length > length(n_DA.Radius)
+%                     b_DA{s}.image = b_DA{s}.image(:,1:length(n_DA.Radius),:);
+%                 end
+%                 n_DA.image = vertcat(n_DA.image, b_DA{s}.image);
+%             end
             data_DA{b} = n_DA; % single image per num_beam value
         else
             data_DA{b} = b_DA; % num_shifts images per num_beam value
             data_phantoms{b} = b_phantoms;
         end
         nend = toc(nstart);
-        fprintf('NTheta: %d. Time: %d minutes and %0.0f seconds\n', ...
+        fprintf('NTheta: %d. Time: %d minutes and %0.3f seconds\n', ...
             Pb.Tx.NTheta, floor(nend/60), rem(nend,60))
     end
     if mainP.save_all_data
@@ -149,8 +154,8 @@ if ~exist('data_BF', 'var')
     data_BF = cell([1, length(mainP.methods_set)]);
     parfor m=1:length(mainP.methods_set)
         bf_method = mainP.methods_set{m};
-        fprintf('----------------------\n')
-        fprintf('Beamforming method: %s.\n', bf_method)
+%         fprintf('----------------------\n')
+%         fprintf('Beamforming method: %s.\n', bf_method)
         mstart = tic;
         
         m_BF = cell([1, length(mainP.num_beams)]);
@@ -165,14 +170,14 @@ if ~exist('data_BF', 'var')
                 b_BF = cell([1, mainPs.shift.num_shifts]);
                 for s=1:mainPs.shift.num_shifts
                     b_BF{s} = ComputeBF(b_DA{s}.image, mainPs, bf_method, 0);
-                    b_BF{s} = normalizeBFImage(b_BF{s}, b_DA.Radius*1000);
+                    b_BF{s} = normalizeBFImage(b_BF{s}, b_DA{s}.Radius*1000);
                 end
             end
             m_BF{b} = b_BF;
         end
         data_BF{m} = m_BF;
         mend = toc(mstart);
-        fprintf('%s: %d minutes and %f seconds\n', mainP.methods_set{m},...
+        fprintf('%s: %d minutes and %0.3f seconds\n', mainP.methods_set{m},...
             floor(mend/60), rem(mend,60))
     end
     if mainP.save_all_data

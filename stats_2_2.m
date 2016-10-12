@@ -6,7 +6,7 @@ mainP.shift = Shift(ShiftType.RadialVar, 1/2, -1, 0, 5);
 mainP.num_beams = 505; % can be a single value or list of values
 mainP.shift_per_beam = true;
 
-speeds = 0:1/8:3/4; % Unit depends on ShiftType
+speeds = 1:1/2:3; % Unit depends on ShiftType
 mainP.save_plots = true;
 mainP = mainP.createOutputDir();
 
@@ -26,6 +26,9 @@ for sp=1:length(speeds)
     end
     clearvars -except mainP pts_3dB_width speeds
 end
+output_file = mainP.outputFileName(mainP.speckle_load);
+fprintf('\nNSaving speed  data  into: %s\n', output_file)
+save(output_file, 'mainP', 'pts_3dB_width', 'speeds', '-v7.3')
 
 %% Plots
 linestyle_list = {':','-','--','-.','-'};
@@ -39,7 +42,7 @@ end
 
 for p=1:size(pts_3dB_width, 1)
     for b=1:size(pts_3dB_width, 2)
-        p1 = plot(speeds, squeeze(pts_3dB_width(p,b,:,:)), 'LineWidth', 2);
+        p1 = plot(speeds, squeeze(pts_3dB_width(p,b,:,:))', 'LineWidth', 2);
         for pidx=1:length(p1)
             p1(pidx).Marker = markers_list{pidx};
             p1(pidx).LineStyle = linestyle_list{pidx};
