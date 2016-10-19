@@ -2,11 +2,12 @@
 clear all
 mainP = MainParameters();
 mainP.pts_range = [40, 50]; % Add a range (in mm) for each point
-mainP.shift = Shift(ShiftType.RadialVar, 1/2, -1, 0, 5);
+mainP.shift = Shift(ShiftType.RadialVar, 1/2, -1, -180, 5);
+% mainP.shift = Shift(ShiftType.LinearSpeed, 1, -1, 0, 5);
 mainP.num_beams = 505; % can be a single value or list of values
 mainP.shift_per_beam = true;
 
-speeds = 1:1/2:3; % Unit depends on ShiftType
+speeds = 0:1/4:2; % Unit depends on ShiftType
 mainP.save_plots = true;
 mainP = mainP.createOutputDir();
 

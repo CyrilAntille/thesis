@@ -3,6 +3,7 @@
 if ~exist('mainP', 'var')
     mainP = MainParameters();
     mainP.pts_range = [40 50]; % Add a range (in mm) for each point
+    mainP.pts_azimuth = [0 1];
     mainP.num_beams = 101; % can be a single value or list of values
     mainP.shift = Shift(ShiftType.LinearSpeed, 1, -1, 90, 1);
 %     mainP.shift = Shift(ShiftType.RadialVar, 7/8, -1, 0, 1);

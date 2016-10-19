@@ -21,7 +21,10 @@ classdef MainParameters
         % if speckle_create or speckle_load are true)
         
         % raw and DA(S) image creation parameters
-        pts_range = [40]; % Add a range (in mm) for each point
+        % Add a range and azimuth (in mm) for each point
+        pts_range = [40];
+        pts_azimuth = [0]; % If non-zero, no guaranty that at least
+        % on beam hits the point perfectly (-> risk of scalloping loss!)
         shift = Shift(ShiftType.RadialVar, 1/2, 3, 0); % Ref Shift.m
         num_beams = 101; % can be a single value or list of values
         shift_per_beam = false;

@@ -1,2 +1,0 @@
-nice -n 15 matlab -nodisplay -r "run('/uio/hume/student-u04/cyrila/Documents/MATLAB/MasterThesis/matlab/main_2_1.m');"
-

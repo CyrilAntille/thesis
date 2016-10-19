@@ -1,9 +1,10 @@
 %% 2.1: Motion between frames
 clear all
 mainP = MainParameters();
-mainP.pts_range = [40, 50]; % Add a range (in mm) for each point
-mainP.shift = Shift(ShiftType.LinearCst, 2*1e-3, 4, 90); % Ref Shift.m
+mainP.pts_range = [40 40];
+mainP.pts_azimuth = [0 1];
 mainP.num_beams = 101; % can be a single value or list of values
+mainP.shift = Shift(ShiftType.LinearCst, 2*1e-3, 4, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 
 mainP.save_plots = false;
@@ -152,6 +153,7 @@ for p=1:length(mainP.pts_range)
         pause
     end
 end
+close
 
 %% Beamformed images plots
 if ~mainP.save_plots

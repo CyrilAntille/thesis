@@ -59,10 +59,11 @@ fprintf('============================================================\n')
 if ~exist('data_DA', 'var')
     fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
     scat_pts = zeros([length(mainP.pts_range) 3]);
-    pts_angle = 0; % Must be 0 to guaranty a transmit beam hitting the pt
     for pidx = 1:length(mainP.pts_range)
-        scat_pts(pidx, :) = [sind(pts_angle) 0 cosd(pts_angle)] ...
-            * mainP.pts_range(pidx) * 1e-3;
+%         scat_pts(pidx, :) = [sind(mainP.pts_angle(pidx)) 0 ...
+%             cosd(mainP.pts_angle(pidx))] * mainP.pts_range(pidx) * 1e-3;
+        scat_pts(pidx, :) = [mainP.pts_azimuth(pidx) * 1e-3 0 ...
+            mainP.pts_range(pidx) * 1e-3];
     end
     original_phantom = PointPhantom(scat_pts, 1+db2mag(40));
     % -> pts 30dB over speckle
