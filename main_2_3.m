@@ -5,8 +5,8 @@ if ~exist('mainP', 'var')
     mainP.pts_range = [40 40]; % Add a range (in mm) for each point
     mainP.pts_azimuth = [0 4];
     mainP.num_beams = 101; % can be a single value or list of values
-    mainP.shift = Shift(ShiftType.LinearSpeed, 0.5, -1, 0, 1);
-%     mainP.shift = Shift(ShiftType.RadialVar, 7/8, -1, 0, 1);
+%     mainP.shift = Shift(ShiftType.LinearSpeed, 0.5, -1, 0, 1);
+    mainP.shift = Shift(ShiftType.RadialVar, 1/2, -1, 0, 1);
     mainP.shift_per_beam = true;
     mainP.save_plots = false;
     
@@ -16,48 +16,10 @@ end
 %%
 main_init
 
-%% Dip measurements
-dips = cell([length(mainP.num_beams), length(mainP.methods_set)]);
-for m=1:length(mainP.methods_set)
-    m_BF = data_BF{m};
-    for b=1:length(mainP.num_beams)
-        Pb = mainP.copyP(mainP.num_beams(b));
-        b_BF = m_BF{b};
-        b_DA = data_DA{b};
-
-        thetaRange = Pb.Tx.Theta;
-        if strcmp(mainP.methods_set(m),'IAA-MBMB-Upsampled')
-            thetaRange = linspace(Pb.Tx.Theta(1), Pb.Tx.Theta(end), 500);
-        end
-        
-        thetaRange = rad2deg(thetaRange);
-        bf_img = db(b_BF);
-        % For this point on, Assumes 2 points at single range
-        p_range = find(b_DA.Radius >= mainP.pts_range(1)*1e-3, 1);
-        bf_img = bf_img(p_range,:);
-%         [pdb, pdeg] = findpeaks(bf_img, thetaRange, 'SortStr','descend');
-        [pdb, pidx] = findpeaks(bf_img, 'SortStr','descend');
-        
-        dip = struct; dip.depth = nan;
-        if length(pdb) >= 2
-            [pts_idx, idx] = sort([pidx(1) pidx(2)]);
-            pts_gain = pdb(idx);
-            dip.pts = [pts_idx; pts_gain];
-            
-            [min_gain, min_idx] = min(bf_img(pts_idx(1):pts_idx(2)));
-            dip.dip_min = [pts_idx(1)+min_idx-1, min_gain];
-            dip.depth = max(pts_gain) - min_gain;
-            [min_peak, minpidx] = min(pts_gain);
-            dip.scalloping = [pts_idx(minpidx) max(pts_gain) - min(pts_gain)];
-        end
-        dips{b,m} = dip;
-    end
-end
-
 %% Plots
 linestyle_list = {'-.','--','-',':'};
 markers_list = {'+','x','diamond','o'};
-colors_list = {'b','r','g','k','m','y'};
+colors_list = {'b','r','g','k','m','c'};
 
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
@@ -67,18 +29,17 @@ end
 for m=1:length(mainP.methods_set)
     m_BF = data_BF{m};
     for b=1:length(mainP.num_beams)
-        Pb = mainP.copyP(mainP.num_beams(b));
+        num_beams = mainP.num_beams(b);
+        if strcmp(mainP.methods_set(m),'IAA-MBMB-Upsampled')
+            num_beams = mainP.upsample_number;
+        end
+        Pb = mainP.copyP(num_beams);
         b_BF = m_BF{b};
         b_DA = data_DA{b};
 
-        thetaRange = Pb.Tx.Theta;
-        if strcmp(mainP.methods_set(m),'IAA-MBMB-Upsampled')
-            thetaRange = linspace(Pb.Tx.Theta(1), Pb.Tx.Theta(end), ...
-                mainP.upsample_number);
-        end
         warning('off')
         [scanConvertedImage, Xs, Zs] = getScanConvertedImage(b_BF, ...
-            thetaRange, 1e3 * b_DA.Radius, 2024, 2024, 'spline');
+            Pb.Tx.Theta, 1e3 * b_DA.Radius, 2024, 2024, 'spline');
         warning('on')
         img = db(abs(scanConvertedImage));
         
@@ -96,40 +57,90 @@ for m=1:length(mainP.methods_set)
 
         
         subplot(1,2,2); hold on
-        p_range = find(b_DA.Radius >= (mainP.pts_range(1))*1e-3, 1);
+        
         bf_img = db(b_BF);
-        bf_img = bf_img(p_range,:);
-        thetaRange = rad2deg(thetaRange);
-        azimuthRange = tand(thetaRange).*(mainP.pts_range(1));
+        ratio = mainP.num_beams(b) / Pb.Tx.NTheta;
+        b_shift = Shift(mainP.shift.type, ratio * mainP.shift.val, ...
+            Pb.Tx.NTheta, mainP.shift.direction);
+        shifts = b_shift.getShifts(Pb);
         
-        plot(azimuthRange, bf_img, 'LineWidth', 2);
-        dip = dips{b,m};
-        if ~isnan(dip.depth)
-            dip_x = azimuthRange(dip.dip_min(1)); 
-            line('XData', [dip_x dip_x], 'YData', [dip.dip_min(2) ...
-                dip.dip_min(2)+dip.depth], 'LineWidth', 2, ...
-                'LineStyle', linestyle_list{2}, 'Color', colors_list{2})
-            p_l1 = strcat('Dip depth:  ', num2str(dip.depth, 3), ' dB');
+        legends = {};
         
-            scallop_x = azimuthRange(dip.scalloping(1));
-            line('XData', [scallop_x scallop_x], 'YData', [max(bf_img) ...
-                - dip.scalloping(2) max(bf_img)], 'LineWidth', 2, ...
-                'LineStyle', linestyle_list{1}, 'Color', colors_list{3})
-            p_l2 = strcat('Scalloping loss:  ', ...
-                num2str(dip.scalloping(2), 3), ' dB');
+        pts_peaks = [];
+        pts_trajectory = {};
+        for p=1:length(mainP.pts_range)
+            p_trajectory = [];
+            for s=1:b_shift.num_shifts
+                s_phantom = b_shift.shiftPositions(data_phantoms, shifts(s));
+                s_az = tan(Pb.Tx.Theta(s)) * s_phantom.positions(p, 3);
+                s_radius = sqrt(s_phantom.positions(p, 3)^2 + s_az^2);
+                s_radius_idx = find(b_DA.Radius >= s_radius,1);
+                if ~isempty(s_radius_idx)
+                    p_trajectory = horzcat(p_trajectory, ...
+                        [s_az * 1e3; s_radius; bf_img(s_radius_idx, s)]);
+                end
+            end
+            pts_trajectory{end+1} =  p_trajectory;
+            [pdb, paz] = findpeaks(p_trajectory(3,:), ...
+                p_trajectory(1,:), 'SortStr','descend');
+            if ~isempty(pts_peaks) && abs(paz(1)-pts_peaks(2,1)) <= 1e-5
+                pdb = pdb(2:end); paz = paz(2:end);
+            end
+            pts_peaks = horzcat(pts_peaks, [pdb(1); paz(1)]);
             
-            pts_x = azimuthRange(dip.pts(1,:));
-            line('XData', [pts_x(1), pts_x(2)], 'YData',...
-                [max(dip.pts(2,:)) max(dip.pts(2,:))],  'LineWidth', 2, ...
-                'LineStyle', linestyle_list{4}, 'Color', colors_list{4})
-            p_l3 = strcat('Distance peaks:  ', ...
-                num2str(pts_x(2) - pts_x(1), 3), ' degrees');
-            
-            legend({'Data', p_l1, p_l2, p_l3}, 'Location', 'best');
-            ylim([dip.dip_min(2)-2 max(bf_img)+1])
-%             xlim(pts_x + [-2, 2])
-        end 
-%         xlabel('angle [deg]');
+            if b_shift.direction == 0 && p > 1 && b_shift.type ~= ...
+                    ShiftType.RadialCst && b_shift.type ~= ShiftType.RadialVar
+                continue % Pts plots overlap, so plot only one
+            end
+            plot(p_trajectory(1,:), p_trajectory(3,:), 'LineWidth', 2, ...
+                'LineStyle', linestyle_list{p}, 'Color', colors_list{p})
+            legends{end+1} = strcat('P', int2str(p), '-gain');
+        end
+        [pts_gain_sorted, pidx] = sort(pts_peaks(1,:), 'descend');
+        pts_gain_sorted = vertcat(pts_gain_sorted, pts_peaks(2,pidx));
+        
+        [pts_az_sorted, pidx] = sort(pts_peaks(2,:));
+        pts_az_sorted = vertcat(pts_peaks(1,pidx), pts_az_sorted);
+        
+        dip = [];
+        for p=1:length(pts_trajectory)
+            trj = pts_trajectory{p};
+            offset = 0.5; % mm. To avoid 'max dip' in other peak
+            start_az = find(trj(1,:) >= pts_az_sorted(2,1)+offset, 1);
+            stop_az = find(trj(1,:) >= pts_az_sorted(2,2)-offset, 1);
+            [gain, idx] = min(trj(3,start_az:stop_az));
+            if isempty(dip) || dip(2) < gain
+                dip = [gain, trj(1,start_az + idx -1)];
+            end
+        end
+        line('XData', [dip(2) dip(2)], 'YData', [dip(1) ...
+            pts_gain_sorted(1,1)], 'LineWidth', 2, 'LineStyle', ...
+            linestyle_list{mod(length(mainP.pts_range), ...
+            length(linestyle_list))+1}, 'Color', colors_list{...
+            mod(length(mainP.pts_range), length(colors_list))+1})
+        legends{end+1} = strcat('Dip depth:  ', ...
+            num2str(pts_gain_sorted(1,1) - dip(2), 3), ' dB');
+
+        scallop_az = pts_gain_sorted(2,2);
+        line('XData', [scallop_az scallop_az], 'YData', ...
+            [pts_gain_sorted(1,2) pts_gain_sorted(1,1)], 'LineWidth', 2,...
+            'LineStyle', linestyle_list{mod(length(mainP.pts_range)+1, ...
+            length(linestyle_list))+1}, 'Color', colors_list{...
+            mod(length(mainP.pts_range)+1, length(colors_list))+1})
+        legends{end+1} = strcat('Scalloping loss: ', ...
+            num2str(pts_gain_sorted(1,1)-pts_gain_sorted(1,2), 3), ' dB');
+
+        line('XData', [pts_az_sorted(2,1), pts_az_sorted(2,2)], 'YData',...
+            [pts_gain_sorted(1,1) pts_gain_sorted(1,1)],  'LineWidth', 2, ...
+            'LineStyle', linestyle_list{mod(length(mainP.pts_range)+2, ...
+            length(linestyle_list))+1}, 'Color', colors_list{...
+            mod(length(mainP.pts_range)+2, length(colors_list))+1})
+        legends{end+1} = strcat('Distance peaks:  ', ...
+            num2str(pts_az_sorted(2,2) - pts_az_sorted(2,1), 3), ' mm');
+        
+        legend(legends, 'Location', 'southoutside');
+        ylim([dip(1)-2 pts_gain_sorted(1,1)+1])
+        xlim([pts_az_sorted(2, 1)-2 pts_az_sorted(2,end)+2])
         xlabel('azimuth [mm]');
         ylabel('gain [dB]');
         hold off;
