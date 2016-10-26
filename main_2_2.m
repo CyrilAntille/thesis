@@ -8,7 +8,7 @@ if ~exist('mainP', 'var')
     mainP.shift = Shift(ShiftType.LinearSpeed, 1, -1, 90, 1);
 %     mainP.shift = Shift(ShiftType.RadialVar, 7/8, -1, 0, 1);
     mainP.shift_per_beam = true;
-    mainP.save_plots = true;
+    mainP.save_plots = false;
     
     mainP = mainP.createOutputDir();
 end
@@ -197,7 +197,36 @@ for b=1:length(mainP.num_beams)
         warning('on')
         img = db(abs(scanConvertedImage));
         
+        
+        if mainP.shift_per_beam
+            b_shift = Shift(mainP.shift.type, mainP.shift.val, ...
+                Pb.Tx.NTheta, mainP.shift.direction);
+            beam_shift = Pb.Tx.SinTheta(2) - Pb.Tx.SinTheta(1);
+        else
+            b_shift = mainP.shift;
+        end
+        shifts = b_shift.getShifts(Pb);
+        max_gain = max(img(:));
         for p=1:length(mainP.pts_range)
+            for s=1:b_shift.num_shifts
+%             for s=floor(b_shift.num_shifts*1/3):ceil(b_shift.num_shifts*2/3)
+                s_phantom = b_shift.shiftPositions(data_phantoms, shifts(s));
+                p_size = 0.05; %mm
+%                 s_az = find(abs(Xs - s_phantom.positions(p, 1)*1e3) < p_size, 10);
+                beam_az = atan(Pb.Tx.Theta(s)) * s_phantom.positions(p, 3)*1e3;
+                s_az = find(abs(Xs - beam_az) < p_size, 10);
+                s_r = find(abs(Zs - s_phantom.positions(p, 3)*1e3) < p_size, 10);
+                if ~isempty(s_r) && ~isempty(s_az)
+                    % Create circle mask (instead of square)
+                    p_r = s_r * ones(1, length(s_az));
+                    p_az = s_az * ones(1, length(s_r));
+                    img_circle = zeros(size(img));
+                    p_circle = (p_r-mean(s_r)).^2 + (p_az'-mean(s_az)).^2 <= 10;
+                    img(s_r, s_az) = p_circle * (max_gain + 3) + ...
+                         abs(p_circle - 1).*img(s_r, s_az);
+                end
+            end
+            
             p_range = mainP.pts_range(p);
             
             if p_range == mainP.P.Tx.FocRad * 1000
@@ -217,8 +246,8 @@ for b=1:length(mainP.num_beams)
             
             set(0, 'currentfigure', figs(p));
             subplot(2,ceil(length(mainP.methods_set)/2),m);
-            contourf(pXs, pZs, p_img, [-100, 15, pts_3dB{p,b,m}(1)-3], ...
-                'ShowText','on');
+            contourf(pXs, pZs, p_img, [-100, pts_3dB{p,b,m}(1)-10, ...
+                pts_3dB{p,b,m}(1)-3, max_gain + 3], 'ShowText','on');
             set(gca,'YDir','Reverse')
             xlabel('azimuth [mm]');
             ylabel('range [mm]');

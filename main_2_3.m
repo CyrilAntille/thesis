@@ -3,9 +3,9 @@
 if ~exist('mainP', 'var')
     mainP = MainParameters();
     mainP.pts_range = [40 40]; % Add a range (in mm) for each point
-    mainP.pts_azimuth = [0 1];
+    mainP.pts_azimuth = [0 4];
     mainP.num_beams = 101; % can be a single value or list of values
-    mainP.shift = Shift(ShiftType.LinearSpeed, 1.5, -1, 0, 1);
+    mainP.shift = Shift(ShiftType.LinearSpeed, 0.5, -1, 0, 1);
 %     mainP.shift = Shift(ShiftType.RadialVar, 7/8, -1, 0, 1);
     mainP.shift_per_beam = true;
     mainP.save_plots = false;
@@ -35,35 +35,20 @@ for m=1:length(mainP.methods_set)
         % For this point on, Assumes 2 points at single range
         p_range = find(b_DA.Radius >= mainP.pts_range(1)*1e-3, 1);
         bf_img = bf_img(p_range,:);
-        [pdb, pdeg] = findpeaks(bf_img, thetaRange, 'SortStr','descend');
-        p_3dbline = ones(size(thetaRange)) .* (pdb(1) - 3);
+%         [pdb, pdeg] = findpeaks(bf_img, thetaRange, 'SortStr','descend');
+        [pdb, pidx] = findpeaks(bf_img, 'SortStr','descend');
         
-        pts_theta = sort([pdeg(1) pdeg(2)]);
-        pts_gain = sort([pdb(1) pdb(2)]);
-        
-        [p_x, ~, ~, ~] = intersections(thetaRange, bf_img, ...
-            thetaRange, p_3dbline, 1);
-        dip_start_idx = find(p_x >= pts_theta(1), 1);
-        dip_end_idx = find(p_x >= pts_theta(2), 1) - 1;
-        dip = struct; dip.lowest_gain = nan;
-        if ~isempty(dip_end_idx) && dip_start_idx > 1 && dip_end_idx > 1
-            dip.peak1_gain = pts_gain(1); dip.peak1_angle = pts_theta(1);
-            dip.peak1_width = p_x(dip_start_idx) - p_x(dip_start_idx-1);
-            dip.peak2_gain = pts_gain(2); dip.peak2_angle = pts_theta(2);
-            dip.peak2_width = p_x(dip_end_idx+1) - p_x(dip_end_idx);
-
-            dip_start = p_x(dip_start_idx); dip_end = p_x(dip_end_idx);
-            dip.start_angle = dip_start; dip.end_angle = dip_end;
-            dip.gain = p_3dbline(1); dip.width = dip_end - dip_start;
-
-            [pdb_min, pidx] = findpeaks(max(bf_img)-bf_img);
-            lowest_angle_idx = pidx(thetaRange(pidx) > dip_start ...
-                & thetaRange(pidx) < dip_end);
-            if ~isempty(lowest_angle_idx)
-                dip.lowest_angle = thetaRange(lowest_angle_idx(1));
-                dip.lowest_gain = bf_img(lowest_angle_idx);
-                dip.depth = max(dip.peak1_gain, dip.peak2_gain) - dip.lowest_gain;
-            end
+        dip = struct; dip.depth = nan;
+        if length(pdb) >= 2
+            [pts_idx, idx] = sort([pidx(1) pidx(2)]);
+            pts_gain = pdb(idx);
+            dip.pts = [pts_idx; pts_gain];
+            
+            [min_gain, min_idx] = min(bf_img(pts_idx(1):pts_idx(2)));
+            dip.dip_min = [pts_idx(1)+min_idx-1, min_gain];
+            dip.depth = max(pts_gain) - min_gain;
+            [min_peak, minpidx] = min(pts_gain);
+            dip.scalloping = [pts_idx(minpidx) max(pts_gain) - min(pts_gain)];
         end
         dips{b,m} = dip;
     end
@@ -111,33 +96,43 @@ for m=1:length(mainP.methods_set)
 
         
         subplot(1,2,2); hold on
-        p_range = find(b_DA.Radius >= mainP.pts_range(1)*1e-3, 1);
+        p_range = find(b_DA.Radius >= (mainP.pts_range(1))*1e-3, 1);
         bf_img = db(b_BF);
         bf_img = bf_img(p_range,:);
         thetaRange = rad2deg(thetaRange);
+        azimuthRange = tand(thetaRange).*(mainP.pts_range(1));
         
-        plot(thetaRange, bf_img, 'LineWidth', 2);
+        plot(azimuthRange, bf_img, 'LineWidth', 2);
         dip = dips{b,m};
-        if ~isnan(dip.lowest_gain)
-            line('XData', [dip.start_angle dip.end_angle], ...
-                'YData', [dip.gain dip.gain], ...
-                'LineWidth', 2, 'LineStyle', '-', 'Color', [0,0,0]+0.4)
-            p_l1 = strcat('Dip 3dB width:  ', ...
-                num2str(dip.width, 3), ' degrees');
-            line('XData', [dip.lowest_angle dip.lowest_angle], 'YData',...
-                [dip.lowest_gain, dip.lowest_gain+dip.depth], ...
-                'LineWidth', 2, 'LineStyle', '--', 'Color', [0,0,0]+0.4)
-            p_l2 = strcat('Dip depth:  ', num2str(dip.depth, 3), ' dB');
+        if ~isnan(dip.depth)
+            dip_x = azimuthRange(dip.dip_min(1)); 
+            line('XData', [dip_x dip_x], 'YData', [dip.dip_min(2) ...
+                dip.dip_min(2)+dip.depth], 'LineWidth', 2, ...
+                'LineStyle', linestyle_list{2}, 'Color', colors_list{2})
+            p_l1 = strcat('Dip depth:  ', num2str(dip.depth, 3), ' dB');
         
-            legend({'Data', p_l1, p_l2}, 'Location', 'best');
-            ylim([dip.lowest_gain-2 max([dip.peak1_gain dip.peak2_gain])])
-            xlim([dip.peak1_angle-dip.peak1_width, dip.peak2_angle+dip.peak2_width])
+            scallop_x = azimuthRange(dip.scalloping(1));
+            line('XData', [scallop_x scallop_x], 'YData', [max(bf_img) ...
+                - dip.scalloping(2) max(bf_img)], 'LineWidth', 2, ...
+                'LineStyle', linestyle_list{1}, 'Color', colors_list{3})
+            p_l2 = strcat('Scalloping loss:  ', ...
+                num2str(dip.scalloping(2), 3), ' dB');
+            
+            pts_x = azimuthRange(dip.pts(1,:));
+            line('XData', [pts_x(1), pts_x(2)], 'YData',...
+                [max(dip.pts(2,:)) max(dip.pts(2,:))],  'LineWidth', 2, ...
+                'LineStyle', linestyle_list{4}, 'Color', colors_list{4})
+            p_l3 = strcat('Distance peaks:  ', ...
+                num2str(pts_x(2) - pts_x(1), 3), ' degrees');
+            
+            legend({'Data', p_l1, p_l2, p_l3}, 'Location', 'best');
+            ylim([dip.dip_min(2)-2 max(bf_img)+1])
+%             xlim(pts_x + [-2, 2])
         end 
-        xlabel('angle [deg]');
+%         xlabel('angle [deg]');
+        xlabel('azimuth [mm]');
         ylabel('gain [dB]');
-%         legend(pl_legend, 'Location', 'best');
         hold off;
-        
         
         if mainP.save_plots
             im_name = strcat(int2str(mainP.num_beams(b)), '_', ...
