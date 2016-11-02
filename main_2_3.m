@@ -2,14 +2,21 @@
 % clear all
 if ~exist('mainP', 'var')
     mainP = MainParameters();
-    mainP.pts_range = [40 40]; % Add a range (in mm) for each point
-    mainP.pts_azimuth = [0 4];
+    mainP.pts_range = [40 40];
+    mainP.pts_azimuth = [0 1];
     mainP.num_beams = 101; % can be a single value or list of values
-%     mainP.shift = Shift(ShiftType.LinearSpeed, 0.5, -1, 0, 1);
-    mainP.shift = Shift(ShiftType.RadialVar, 1/2, -1, 0, 1);
+    mainP.shift = Shift(ShiftType.LinearSpeed, 0, -1, 0, 1);
+%     mainP.shift = Shift(ShiftType.RadialVar, 1/2, -1, 0, 1);
     mainP.shift_per_beam = true;
     mainP.save_plots = false;
     
+    if true && mainP.shift.type == ShiftType.RadialVar && ...
+            mainP.shift.type ~= ShiftType.RadialCst
+        % This allows to set mainP.pts_range above as radius instead.
+        % This step transforms radiuses to ranges.
+        mainP.pts_range = mainP.pts_range.*...
+            cos(sin(mainP.pts_azimuth./mainP.pts_range));
+    end
     mainP = mainP.createOutputDir();
 end
 
@@ -37,25 +44,8 @@ for m=1:length(mainP.methods_set)
         b_BF = m_BF{b};
         b_DA = data_DA{b};
 
-        warning('off')
-        [scanConvertedImage, Xs, Zs] = getScanConvertedImage(b_BF, ...
-            Pb.Tx.Theta, 1e3 * b_DA.Radius, 2024, 2024, 'spline');
-        warning('on')
-        img = db(abs(scanConvertedImage));
-        
-        clf(); subplot(1,2,1)
-        imagesc(Xs, Zs, img)
-        caxis([-25  25]);
-        xlim([-20 20])
-        ylim([min(mainP.pts_range)-5 max(mainP.pts_range)+5])
-        colorbar
-        colormap(gray)
-        xlabel('azimuth [mm]');
-        ylabel('range [mm]');
-        title(['Method :', mainP.methods_set{m}, ', No Beams: ', ...
-            int2str(mainP.num_beams(b))])
-
-        
+        % ---- Peaks plot --------
+        clf();
         subplot(1,2,2); hold on
         
         bf_img = db(b_BF);
@@ -66,32 +56,49 @@ for m=1:length(mainP.methods_set)
         
         legends = {};
         
+        traj_overlap = b_shift.val == 0 || (b_shift.direction == 0 && ...
+            b_shift.type ~= ShiftType.RadialCst && ...
+            b_shift.type ~= ShiftType.RadialVar); % Pts traj overlap
         pts_peaks = [];
         pts_trajectory = {};
         for p=1:length(mainP.pts_range)
+%             if p > 1 && traj_overlap
+%                 p_trajectory = pts_trajectory{1};
+%                 [pdb, paz] = findpeaks(p_trajectory(3,:), ...
+%                     p_trajectory(1,:), 'SortStr','descend');
+%                 pts_peaks = horzcat(pts_peaks, [pdb(p); paz(p)]);
+%                 pts_trajectory{end+1} =  p_trajectory;
+%                 continue % Pts plots overlap, so use only one
+%             end
             p_trajectory = [];
+            pt_az = [];
             for s=1:b_shift.num_shifts
                 s_phantom = b_shift.shiftPositions(data_phantoms, shifts(s));
+                pt_az(end+1) = s_phantom.positions(p, 1) * 1e3; % mm
+                
                 s_az = tan(Pb.Tx.Theta(s)) * s_phantom.positions(p, 3);
                 s_radius = sqrt(s_phantom.positions(p, 3)^2 + s_az^2);
                 s_radius_idx = find(b_DA.Radius >= s_radius,1);
                 if ~isempty(s_radius_idx)
+%                     p_trajectory = horzcat(p_trajectory, ...
+%                         [s_az * 1e3; s_radius * 1e3; bf_img(s_radius_idx, s)]);
                     p_trajectory = horzcat(p_trajectory, ...
-                        [s_az * 1e3; s_radius; bf_img(s_radius_idx, s)]);
+                        [s_az * 1e3; s_phantom.positions(p, 3) * 1e3; ...
+                        bf_img(s_radius_idx, s)]);
                 end
             end
             pts_trajectory{end+1} =  p_trajectory;
             [pdb, paz] = findpeaks(p_trajectory(3,:), ...
                 p_trajectory(1,:), 'SortStr','descend');
-            if ~isempty(pts_peaks) && abs(paz(1)-pts_peaks(2,1)) <= 1e-5
-                pdb = pdb(2:end); paz = paz(2:end);
-            end
-            pts_peaks = horzcat(pts_peaks, [pdb(1); paz(1)]);
             
-            if b_shift.direction == 0 && p > 1 && b_shift.type ~= ...
-                    ShiftType.RadialCst && b_shift.type ~= ShiftType.RadialVar
-                continue % Pts plots overlap, so plot only one
-            end
+            % Expected point azimuth when beam hits it
+            diff_az = abs(pt_az - p_trajectory(1,:));
+            [~, az_idx] = min(diff_az);
+            pt_center = p_trajectory(1, az_idx);
+            % Finds nearest peak
+            [~, paz_idx] = min(abs(paz - pt_center));
+            pts_peaks = horzcat(pts_peaks, [pdb(paz_idx); paz(paz_idx)]);
+            
             plot(p_trajectory(1,:), p_trajectory(3,:), 'LineWidth', 2, ...
                 'LineStyle', linestyle_list{p}, 'Color', colors_list{p})
             legends{end+1} = strcat('P', int2str(p), '-gain');
@@ -105,7 +112,7 @@ for m=1:length(mainP.methods_set)
         dip = [];
         for p=1:length(pts_trajectory)
             trj = pts_trajectory{p};
-            offset = 0.5; % mm. To avoid 'max dip' in other peak
+            offset = 0.1; % mm. To avoid 'max dip' in other peak
             start_az = find(trj(1,:) >= pts_az_sorted(2,1)+offset, 1);
             stop_az = find(trj(1,:) >= pts_az_sorted(2,2)-offset, 1);
             [gain, idx] = min(trj(3,start_az:stop_az));
@@ -113,13 +120,16 @@ for m=1:length(mainP.methods_set)
                 dip = [gain, trj(1,start_az + idx -1)];
             end
         end
-        line('XData', [dip(2) dip(2)], 'YData', [dip(1) ...
-            pts_gain_sorted(1,1)], 'LineWidth', 2, 'LineStyle', ...
-            linestyle_list{mod(length(mainP.pts_range), ...
-            length(linestyle_list))+1}, 'Color', colors_list{...
-            mod(length(mainP.pts_range), length(colors_list))+1})
-        legends{end+1} = strcat('Dip depth:  ', ...
-            num2str(pts_gain_sorted(1,1) - dip(2), 3), ' dB');
+        if ~isempty(dip)
+            line('XData', [dip(2) dip(2)], 'YData', [dip(1) ...
+                pts_gain_sorted(1,1)], 'LineWidth', 2, 'LineStyle', ...
+                linestyle_list{mod(length(mainP.pts_range), ...
+                length(linestyle_list))+1}, 'Color', colors_list{...
+                mod(length(mainP.pts_range), length(colors_list))+1})
+            legends{end+1} = strcat('Dip depth:  ', ...
+                num2str(pts_gain_sorted(1,1) - dip(1), 3), ' dB');
+            ylim([dip(1)-2 pts_gain_sorted(1,1)+1])
+        end
 
         scallop_az = pts_gain_sorted(2,2);
         line('XData', [scallop_az scallop_az], 'YData', ...
@@ -139,11 +149,44 @@ for m=1:length(mainP.methods_set)
             num2str(pts_az_sorted(2,2) - pts_az_sorted(2,1), 3), ' mm');
         
         legend(legends, 'Location', 'southoutside');
-        ylim([dip(1)-2 pts_gain_sorted(1,1)+1])
         xlim([pts_az_sorted(2, 1)-2 pts_az_sorted(2,end)+2])
         xlabel('azimuth [mm]');
         ylabel('gain [dB]');
         hold off;
+        
+        % ---- BF image plot --------
+        warning('off')
+        [scanConvertedImage, Xs, Zs] = getScanConvertedImage(b_BF, ...
+            Pb.Tx.Theta, 1e3 * b_DA.Radius, 2024, 2024, 'spline');
+        warning('on')
+        img = db(abs(scanConvertedImage));
+        
+        subplot(1,2,1)
+        imagesc(Xs, Zs, img)
+        caxis([-25  25]);
+        xlim([pts_az_sorted(2, 1)-4 pts_az_sorted(2,end)+4])
+        min_y = Inf; max_y = -Inf;
+        for p=1:length(pts_trajectory)
+            trj = pts_trajectory{p};
+            minp = min(trj(2,:)); maxp = max(trj(2,:));
+            if minp < min_y
+                min_y = minp;
+            end
+            if maxp > max_y
+                max_y = maxp;
+            end
+        end
+        ylim([min_y-2 max_y+2])
+        
+%         xlim([-20 20])
+%         ylim([min(mainP.pts_range)-2 max(mainP.pts_range)+2])
+        colorbar
+        colormap(gray)
+        xlabel('azimuth [mm]');
+        ylabel('range [mm]');
+        title(['Method :', mainP.methods_set{m}, ', No Beams: ', ...
+            int2str(mainP.num_beams(b))])
+        % -------------------------
         
         if mainP.save_plots
             im_name = strcat(int2str(mainP.num_beams(b)), '_', ...
