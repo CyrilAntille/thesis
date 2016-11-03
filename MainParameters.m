@@ -48,6 +48,7 @@ classdef MainParameters
         save_all_data = false; % Can take multiple GB of memory
         save_plots = false; % If false, will display them instead
         save_folder = '../output/'; % Ref createOutputDir()
+        files_prefix = '';
         % Multiprocessing might become an issue if little RAM space available.
         % For disable to work, must disable automatic creation of parallel pool
         % for parfor (in parallel preferences).
@@ -69,8 +70,8 @@ classdef MainParameters
             if used_speckle
                 speckle_name = ['_speckle' num2str(obj.speckle_seed)];
             end
-            output_file = [num2str(obj.num_beams(1)) '_' ...
-                num2str(obj.num_beams(end)) '_' ...
+            output_file = [obj.files_prefix num2str(obj.num_beams(1)) ...
+                '_' num2str(obj.num_beams(end)) '_' ...
                 num2str(obj.shift_per_beam) speckle_name '.mat'];
             output_file = strcat(obj.save_folder, output_file);
         end

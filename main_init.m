@@ -7,13 +7,13 @@ end
 
 %% 1. FieldII initialization and Speckle raw data creation
 fprintf('============================================================\n')
-fprintf('Initializing Field II for main process.\n')
+fprintf('Initializing Field II for main process\n')
 % field_init(0);
 evalc('field_init(0)');
 
 if mainP.speckle_create && ~exist('speckle_raw', 'var')
-    fprintf('Creating raw speckle image. \n')
-    fprintf('Speckle can take a long time to simulate.\n')
+    fprintf('Creating raw speckle image\n')
+    fprintf('Speckle can take a long time to simulate\n')
     speckle_phantom = PlanewaveVesselPhantom(mainP.P, 0, ...
         mainP.speckle_numPts, mainP.speckle_seed);
     speckle_raw = CalcRespAll(mainP.P, speckle_phantom);
@@ -60,8 +60,6 @@ if ~exist('data_DA', 'var')
     fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
     scat_pts = zeros([length(mainP.pts_range) 3]);
     for pidx = 1:length(mainP.pts_range)
-%         scat_pts(pidx, :) = [sind(mainP.pts_angle(pidx)) 0 ...
-%             cosd(mainP.pts_angle(pidx))] * mainP.pts_range(pidx) * 1e-3;
         scat_pts(pidx, :) = [mainP.pts_azimuth(pidx) * 1e-3 0 ...
             mainP.pts_range(pidx) * 1e-3];
     end
@@ -95,6 +93,8 @@ if ~exist('data_DA', 'var')
         parfor s=1:b_shift.num_shifts
             % Raw
             s_phantom = b_shift.shiftPositions(original_phantom, shifts(s));
+%             fprintf(strcat('\b\nShift: ', int2str(s), ' , az: ', ...
+%                 num2str(s_phantom.positions(1,1)), '\n'))
             s_raw = CalcRespAll(Pb, s_phantom);
             s_raw = reshapeRawImg(mainP, s_raw);
             s_raw.image = s_raw.image + speckle_raw_image;
@@ -116,18 +116,6 @@ if ~exist('data_DA', 'var')
             for s=2:b_shift.num_shifts
                 n_DA.image = vertcat(n_DA.image, b_DA{s}.image);
             end
-
-%             n_DA = b_DA{1};
-%             for s=2:b_shift.num_shifts
-%                 radius_length = length(b_DA{s}.Radius); % This number may vary
-%                 if length(n_DA.Radius) > radius_length
-%                     n_DA.image = n_DA.image(:,1:radius_length,:);
-%                     n_DA.Radius = b_DA{s}.Radius;
-%                 elseif radius_length > length(n_DA.Radius)
-%                     b_DA{s}.image = b_DA{s}.image(:,1:length(n_DA.Radius),:);
-%                 end
-%                 n_DA.image = vertcat(n_DA.image, b_DA{s}.image);
-%             end
             data_DA{b} = n_DA; % single image per num_beam value
         else
             data_DA{b} = b_DA; % num_shifts images per num_beam value
@@ -151,7 +139,7 @@ fprintf('============================================================\n')
 
 %% 3. Beamform data: DAS, MV, IAA
 if ~exist('data_BF', 'var')
-    fprintf('Beamforming all DA(S) images.\n')
+    fprintf('Beamforming all DA(S) images\n')
     data_BF = cell([1, length(mainP.methods_set)]);
     parfor m=1:length(mainP.methods_set)
         bf_method = mainP.methods_set{m};
