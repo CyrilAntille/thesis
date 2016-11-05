@@ -57,79 +57,54 @@ fprintf('============================================================\n')
 
 %% 2. Create raw and DA(S) data with point scatterers
 if ~exist('data_DA', 'var')
-    fprintf('Creating raw and DA(S) images. This can take hours if many beam setups (NThetas).\n')
+    fprintf('Creating raw and DA(S) images\n')
+    nstart = tic;
+    % Scatterer points creation
     scat_pts = zeros([length(mainP.pts_range) 3]);
     for pidx = 1:length(mainP.pts_range)
         scat_pts(pidx, :) = [mainP.pts_azimuth(pidx) * 1e-3 0 ...
             mainP.pts_range(pidx) * 1e-3];
     end
-    original_phantom = PointPhantom(scat_pts, 1+db2mag(40));
-    % -> pts 30dB over speckle
-    
+    data_phantom = PointPhantom(scat_pts, 1+db2mag(mainP.pts_gain));
+    % -> pts mainP.pts_gain over speckle
+
+    fprintf('Progress:\n');
+    fprintf([repmat('.', 1, mainP.shift.num_shifts) '\n\n']);
+    shifts = mainP.shift.getShifts(mainP.P);
+    data_DA = cell([1, mainP.shift.num_shifts]);
+    parfor s=1:mainP.shift.num_shifts
+        % Raw
+        s_phantom = mainP.shift.shiftPositions(data_phantom, shifts(s));
+        s_raw = CalcRespAll(mainP.P, s_phantom);
+        s_raw = reshapeRawImg(mainP, s_raw);
+        s_raw.image = s_raw.image + speckle_raw_image;
+        if mainP.shift_per_beam
+            beam_shift = mainP.P.Tx.SinTheta(2) - mainP.P.Tx.SinTheta(1);
+            Ps = copyStruct(mainP.P); Ps.Tx.NTheta = 1;
+            Ps.Tx.SinTheta = - Ps.Tx.SinThMax + beam_shift * (s-1);
+            Ps.Tx.Theta = asin(Ps.Tx.SinTheta);
+        else
+            Ps = mainP.P;
+        end
+        % DA(S)
+        data_DA{s} = BeamformAll(Ps, s_raw);
+        fprintf('\b|\n');
+    end
     if mainP.shift_per_beam
-        data_phantoms = original_phantom;
-    else
-        data_phantoms = cell([1, length(mainP.num_beams)]);
+        % Need to merge beamformed images into a single one.
+        n_DA = data_DA{1};
+        for s=2:mainP.shift.num_shifts
+            n_DA.image = vertcat(n_DA.image, data_DA{s}.image);
+        end
+        data_DA = n_DA; % single image
     end
-    data_DA = cell([1, length(mainP.num_beams)]);
-    for b=1:length(mainP.num_beams)
-        Pb = mainP.copyP(mainP.num_beams(b));
-        fprintf('NTheta: %d.\n', Pb.Tx.NTheta)
-        nstart = tic;
-        
-        if mainP.shift_per_beam
-            b_shift = Shift(mainP.shift.type, mainP.shift.val, ...
-                Pb.Tx.NTheta, mainP.shift.direction);
-            beam_shift = Pb.Tx.SinTheta(2) - Pb.Tx.SinTheta(1);
-        else
-            b_shift = mainP.shift;
-            b_phantoms = cell([1, b_shift.num_shifts]);
-        end
-        
-        fprintf('Progress:\n');
-        fprintf([repmat('.',1,b_shift.num_shifts) '\n\n']);
-        b_DA = cell([1, b_shift.num_shifts]);
-        shifts = b_shift.getShifts(Pb);
-        parfor s=1:b_shift.num_shifts
-            % Raw
-            s_phantom = b_shift.shiftPositions(original_phantom, shifts(s));
-%             fprintf(strcat('\b\nShift: ', int2str(s), ' , az: ', ...
-%                 num2str(s_phantom.positions(1,1)), '\n'))
-            s_raw = CalcRespAll(Pb, s_phantom);
-            s_raw = reshapeRawImg(mainP, s_raw);
-            s_raw.image = s_raw.image + speckle_raw_image;
-            if mainP.shift_per_beam
-                Ps = copyStruct(Pb); Ps.Tx.NTheta = 1;
-                Ps.Tx.SinTheta = - Ps.Tx.SinThMax + beam_shift * (s-1);
-                Ps.Tx.Theta = asin(Ps.Tx.SinTheta);
-            else
-                Ps = Pb;
-                b_phantoms{s} = s_phantom;
-            end
-            % DA(S)
-            b_DA{s} = BeamformAll(Ps, s_raw);
-            fprintf('\b|\n');
-        end
-        if mainP.shift_per_beam
-            % Need to merge beamformed images into a single one.
-            n_DA = b_DA{1};
-            for s=2:b_shift.num_shifts
-                n_DA.image = vertcat(n_DA.image, b_DA{s}.image);
-            end
-            data_DA{b} = n_DA; % single image per num_beam value
-        else
-            data_DA{b} = b_DA; % num_shifts images per num_beam value
-            data_phantoms{b} = b_phantoms;
-        end
-        nend = toc(nstart);
-        fprintf('NTheta: %d. Time: %d minutes and %0.3f seconds\n', ...
-            Pb.Tx.NTheta, floor(nend/60), rem(nend,60))
-    end
+    nend = toc(nstart);
+    fprintf('Raw and DA(s) creation: Time: %d minutes and %0.3f seconds\n', ...
+        floor(nend/60), rem(nend,60))
     if mainP.save_all_data
-        output_file = mainP.outputFileName(~isempty(speckle_raw_image));
+        output_file = mainP.outputFileName(false);
         fprintf('\nNSaving DA(S) data  into: %s\n', output_file)
-        save(output_file, 'mainP', 'shift', 'num_beams', 'data_phantoms',...
-            'data_DA', '-v7.3')
+        save(output_file, 'mainP', 'data_phantom', 'data_DA', '-v7.3')
     end
 end
 field_end();
@@ -146,23 +121,15 @@ if ~exist('data_BF', 'var')
 %         fprintf('----------------------\n')
 %         fprintf('Beamforming method: %s.\n', bf_method)
         mstart = tic;
-        
-        m_BF = cell([1, length(mainP.num_beams)]);
-        for b=1:length(mainP.num_beams)
-            mainPs = copyStruct(mainP);
-            mainPs.P = mainPs.copyP(mainPs.num_beams(b));
-            b_DA = data_DA{b};
-            if mainP.shift_per_beam
-                b_BF = ComputeBF(b_DA.image, mainPs, bf_method, 0);
-                b_BF = normalizeBFImage(b_BF, b_DA.Radius*1000);
-            else
-                b_BF = cell([1, mainPs.shift.num_shifts]);
-                for s=1:mainPs.shift.num_shifts
-                    b_BF{s} = ComputeBF(b_DA{s}.image, mainPs, bf_method, 0);
-                    b_BF{s} = normalizeBFImage(b_BF{s}, b_DA{s}.Radius*1000);
-                end
+        if mainP.shift_per_beam
+            m_BF = ComputeBF(data_DA.image, mainP, bf_method, 0);
+            m_BF = normalizeBFImage(m_BF, data_DA.Radius*1000);
+        else
+            m_BF = cell([1, mainP.shift.num_shifts]);
+            for s=1:mainP.shift.num_shifts
+                m_BF{s} = ComputeBF(data_DA{s}.image, mainP, bf_method, 0);
+                m_BF{s} = normalizeBFImage(m_BF{s}, data_DA{s}.Radius*1000);
             end
-            m_BF{b} = b_BF;
         end
         data_BF{m} = m_BF;
         mend = toc(mstart);
@@ -170,7 +137,7 @@ if ~exist('data_BF', 'var')
             floor(mend/60), rem(mend,60))
     end
     if mainP.save_all_data
-        output_file = mainP.outputFileName(~isempty(speckle_raw_image));
+        output_file = mainP.outputFileName(false);
         fprintf('\nNSaving beamformed data into: %s\n', output_file)
         save(output_file, 'data_BF', '-append')
     end

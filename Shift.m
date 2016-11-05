@@ -35,16 +35,9 @@ classdef Shift
             elseif obj.type == ShiftType.LinearSpeedFrame
                 shift_val = obj.val * 2*1e-4 * P.Tx.NTheta; % 0.2ms per beam
             end
-%             shifts = (0:obj.num_shifts-1) * shift_val;
-            shifts = (-floor(obj.num_shifts/2):floor(obj.num_shifts/2))...
-                * shift_val;
-            % stop-and-go
-            for s=1:length(shifts)
-                stop_rem = mod(s-1, obj.stop_and_go_ratio);
-                if stop_rem > 0
-                    shifts(s) = shifts(s - stop_rem);
-                end
-            end
+            max_shift = floor(obj.num_shifts/(2*obj.stop_and_go_ratio));
+            shifts = (-max_shift:max_shift) * shift_val;
+            shifts = repelem(shifts, obj.stop_and_go_ratio); % stop-and-go
         end
         function s_phantom = shiftPositions(obj, phantom, shift_val)
             % Note: - shift_val = shift from right to left (+ from left...)

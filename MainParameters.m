@@ -25,8 +25,9 @@ classdef MainParameters
         pts_range = [40];
         pts_azimuth = [0]; % If non-zero, no guaranty that at least
         % on beam hits the point perfectly (-> risk of scalloping loss!)
+        pts_gain = 30; % dB over background average
         shift = Shift(ShiftType.RadialVar, 1/2, 3, 0); % Ref Shift.m
-        num_beams = 101; % can be a single value or list of values
+        num_beams = 101;
         shift_per_beam = false;
         % If true, the scatterer points are shifted after each beam.
         % This results in a single image per num_beam value.
@@ -62,18 +63,20 @@ classdef MainParameters
             P.Tx.SinTheta = linspace(-P.Tx.SinThMax,P.Tx.SinThMax,P.Tx.NTheta);
             P.Tx.Theta = asin(P.Tx.SinTheta);
         end
-        function output_file = outputFileName(obj, used_speckle)
-            % Output file name: <lowest_num_beams>_<highest_num_beams>_
-            % <shift_per_beam(0=false,1=true)>_<speckle_name>.mat
-            % Example: 61_211_0_speckle2.mat
-            speckle_name = '_noSpeckle';
-            if used_speckle
-                speckle_name = ['_speckle' num2str(obj.speckle_seed)];
+        function output_file = outputFileName(obj, is_plot)
+            % Output is .png if is_plot=true, else .mat
+            % Output file name: <prefix>_<shift_per_beam(0=false,1=true)>_
+            % <num_beams>_<shift.type>_<shift.val>.mat
+            % Example: 1_61_RadialVar_0.5.mat
+            output_file = [obj.files_prefix num2str(obj.shift_per_beam,3)...
+                '_' int2str(obj.num_beams) '_' char(obj.shift.type) '_' ...
+                num2str(obj.shift.val)];
+            if is_plot
+                output_file = strcat(obj.save_folder, 'png/', ...
+                    output_file, '.png');
+            else
+                output_file = strcat(obj.save_folder, output_file, '.mat');
             end
-            output_file = [obj.files_prefix num2str(obj.num_beams(1)) ...
-                '_' num2str(obj.num_beams(end)) '_' ...
-                num2str(obj.shift_per_beam) speckle_name '.mat'];
-            output_file = strcat(obj.save_folder, output_file);
         end
         function obj = createOutputDir(obj)
             if ~(obj.save_all_data || obj.save_plots)

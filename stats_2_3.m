@@ -3,10 +3,10 @@ clear all
 mainP = MainParameters();
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.pts_range = [40 40];
-mainP.pts_azimuth = [0 0.5];
+mainP.pts_azimuth = [0 1];
 mainP.num_beams = 505; % can be a single value or list of values
-mainP.shift = Shift(ShiftType.LinearSpeed, 0, -1, 0, 5);
-%     mainP.shift = Shift(ShiftType.RadialVar, 1/2, -1, 0, 1);
+mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 5);
+%     mainP.shift = Shift(ShiftType.RadialVar, 1/2, mainP.num_beams, 0, 1);
 mainP.shift_per_beam = true;
 mainP.save_plots = true;
 
@@ -17,6 +17,7 @@ if true && mainP.shift.type == ShiftType.RadialVar && ...
     mainP.pts_range = mainP.pts_range.*...
         cos(sin(mainP.pts_azimuth./mainP.pts_range));
 end
+mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %% Various speeds
