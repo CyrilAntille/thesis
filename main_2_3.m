@@ -2,14 +2,14 @@
 % clear all
 if ~exist('mainP', 'var')
     mainP = MainParameters();
-    mainP.pts_range = [40]; 
-    mainP.pts_azimuth = [0];
+    mainP.pts_range = [40 40]; 
+    mainP.pts_azimuth = [0 1];
     mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
     mainP.num_beams = 101;
     mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 1);
 %     mainP.shift = Shift(ShiftType.RadialVar, 1/2, mainP.num_beams, 0, 1);
     mainP.shift_per_beam = true;
-    mainP.save_plots = true;
+    mainP.save_plots = false;
     
     if true && (mainP.shift.type == ShiftType.RadialVar || ...
             mainP.shift.type == ShiftType.RadialCst)
@@ -53,13 +53,13 @@ for m=1:length(mainP.methods_set)
         if isfield(m_pts{p}, 'peak')
             m_peaks = horzcat(m_peaks, m_pts{p}.peak);
         end
-        if p == 1 || mainP.shift.direction ~= 0 ||(mainP.shift.val ~= 0 ...
-                && mainP.shift.type ~= ShiftType.LinearSpeed)
-            plot(1e3*m_pts{p}.beam_trajectory(1,:), m_pts{p}.beam_trajectory(3,:), ...
-                'LineWidth', 2, 'LineStyle', linestyle_list{p}, ...
-                'Color', colors_list{p})
-            legends{end+1} = strcat('P', int2str(p), '-gain');
-        end
+        plot(1e3*m_pts{p}.beam_trajectory(1,:), m_pts{p}.beam_trajectory(3,:), ...
+            'LineWidth', 2, 'LineStyle', linestyle_list{p}, ...
+            'Color', colors_list{p})
+        pt_range = find(m_pts{p}.beam_trajectory(1,:)>=m_pts{p}.peak(1),1);
+        max_ampl = max(m_pts{p}.beam_trajectory(3,pt_range-1:pt_range+1));
+        legends{end+1} = strcat('P', int2str(p), '-gain: ', ...
+            num2str(max_ampl, 5), ' dB');
     end
     pts_az_sorted = m_peaks(:,1);
     pts_gain_sorted = m_peaks(:,1);
@@ -118,10 +118,15 @@ for m=1:length(mainP.methods_set)
     % ---- BF Contour plot --------
     subplot(1,2,1);
     warning('off')
-    [scanConvertedImage, Xs, Zs] = getScanConvertedImage(m_BF, ...
+    % Variant 1: Image interpolation on absolute image
+    [scanConvertedImage, Xs, Zs] = getScanConvertedImage(abs(m_BF), ...
         m_P.Tx.Theta, data_DA.Radius, 2024, 2024, 'spline');
     warning('on')
-    img = db(abs(scanConvertedImage));
+    img = db(scanConvertedImage);
+    % Variant 2: Image interpolation on complex image (remove abs() from
+    % getScanConvertedImage()).
+    % img = db(abs(scanConvertedImage));
+    
     % Contour plot azimuth bounds
     az_offset = (1.0 + 1.5 * mainP.shift.val) * 1e-3; % m
     minXs = find(Xs >= pts_az_sorted(1,1) - az_offset, 1);
