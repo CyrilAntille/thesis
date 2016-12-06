@@ -3,9 +3,9 @@ clear all
 mainP = MainParameters();
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.pts_range = [40 40];
-mainP.pts_azimuth = [0 1];
+mainP.pts_azimuth = [0 0.75];
 mainP.num_beams = 505; % can be a single value or list of values
-mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 5);
+mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, -180, 5);
 %     mainP.shift = Shift(ShiftType.RadialVar, 1/2, mainP.num_beams, 0, 1);
 mainP.shift_per_beam = true;
 mainP.save_plots = true;
@@ -29,7 +29,7 @@ for sp=1:length(speeds)
     clearvars -except mainP speeds
 end
 %% Various pts distances
-dists = 0.5:1/4:2;
+dists = 0.25:1/4:1;
 for d=1:length(dists)
     fprintf('Stats_2_2: Running main_2_2 with distance: %0.2f.\n', dists(d));
     mainP.pts_azimuth = [0 dists(d)];

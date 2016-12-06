@@ -2,13 +2,14 @@
 % clear all
 if ~exist('mainP', 'var')
     mainP = MainParameters();
-    mainP.pts_range = [40 40]; 
-    mainP.pts_azimuth = [0 1];
+    mainP.pts_range = [40]; 
+    mainP.pts_azimuth = [0];
+    mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
     mainP.num_beams = 101;
-    mainP.shift = Shift(ShiftType.LinearSpeed, 0.5, mainP.num_beams, 0, 1);
+    mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 1);
 %     mainP.shift = Shift(ShiftType.RadialVar, 1/2, mainP.num_beams, 0, 1);
     mainP.shift_per_beam = true;
-    mainP.save_plots = false;
+    mainP.save_plots = true;
     
     if true && (mainP.shift.type == ShiftType.RadialVar || ...
             mainP.shift.type == ShiftType.RadialCst)
@@ -52,17 +53,18 @@ for m=1:length(mainP.methods_set)
         if isfield(m_pts{p}, 'peak')
             m_peaks = horzcat(m_peaks, m_pts{p}.peak);
         end
-        if p == 1 || mainP.shift.val ~= 0 || mainP.shift.direction ~= 0 ...
-                || mainP.shift.type ~= ShiftType.LinearSpeed
+        if p == 1 || mainP.shift.direction ~= 0 ||(mainP.shift.val ~= 0 ...
+                && mainP.shift.type ~= ShiftType.LinearSpeed)
             plot(1e3*m_pts{p}.beam_trajectory(1,:), m_pts{p}.beam_trajectory(3,:), ...
                 'LineWidth', 2, 'LineStyle', linestyle_list{p}, ...
                 'Color', colors_list{p})
             legends{end+1} = strcat('P', int2str(p), '-gain');
         end
     end
-    
+    pts_az_sorted = m_peaks(:,1);
+    pts_gain_sorted = m_peaks(:,1);
     % If two peaks, computes dip
-    if length(m_peaks) == 2 && mainP.pts_azimuth(1) ~= mainP.pts_azimuth(2)
+    if size(m_peaks,2) == 2 && mainP.pts_azimuth(1) ~= mainP.pts_azimuth(2)
         [pts_az_sorted, pidx] = sort(m_peaks(1,:));
         pts_az_sorted = vertcat(pts_az_sorted, m_peaks(2,pidx));
         [pts_gain_sorted, pidx] = sort(m_peaks(2,:), 'descend');
@@ -123,7 +125,7 @@ for m=1:length(mainP.methods_set)
     % Contour plot azimuth bounds
     az_offset = (1.0 + 1.5 * mainP.shift.val) * 1e-3; % m
     minXs = find(Xs >= pts_az_sorted(1,1) - az_offset, 1);
-    maxXs = find(Xs >= pts_az_sorted(1,2) + az_offset, 1);
+    maxXs = find(Xs >= pts_az_sorted(1,end) + az_offset, 1);
     if isempty(maxXs)
         maxXs = length(Xs);
     end
@@ -152,13 +154,15 @@ for m=1:length(mainP.methods_set)
     p_img = img(minZs:maxZs, minXs:maxXs);
     
     contour_levels = [m_peaks(2,1)-10 m_peaks(2,1)-2];
-    if size(m_peaks, 1) >= 2
+    cmin = max(p_img(:)) - 10;
+    if size(m_peaks, 2) >= 2
         contour_levels = [dip(2), (pts_gain_sorted(2,1) + dip(2))/2, ...
-            pts_gain_sorted(2,2)];
+            pts_gain_sorted(2,end)];
+        cmin = dip(2) - 5;
     end
     [c, h] = contourf(1e3*pXs, 1e3*pZs, p_img, contour_levels, ...
         'LineColor', 'k');
-    caxis([dip(2)-5 max(p_img(:))])
+    caxis([cmin max(p_img(:))])
     contourcbar
     clabel(c,'FontSize',10,'Color','r','Rotation',0,'FontWeight','bold')
     

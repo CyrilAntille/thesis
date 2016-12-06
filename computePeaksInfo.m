@@ -16,7 +16,7 @@ for m=1:length(mainP.methods_set)
     end
     shifts = m_shift.getShifts(m_P);
     
-    bf_img = db(m_BF);
+    bf_img = db(abs(m_BF));
     scatterer_points = cell([1 length(mainP.pts_range)]);
     pts_center = zeros([1 length(mainP.pts_range)]);
     % Note: trajectory same for all BFs except IAA-Upsampled
@@ -33,8 +33,8 @@ for m=1:length(mainP.methods_set)
             s_radius = sqrt(s_phantom.positions(p, 3)^2 + s_az^2);
             s_radius_idx = find(data_DA.Radius >= s_radius,1);
             if ~isempty(s_radius_idx)
-                scat_p.beam_trajectory(:,s) = [s_az; s_radius; ...
-                    bf_img(s_radius_idx, s)];
+                bf_ampl = max(bf_img(s_radius_idx:s_radius_idx+5, s));
+                scat_p.beam_trajectory(:,s) = [s_az; s_radius; bf_ampl];
             end
         end
         % Expected point azimuth when beam hits it
@@ -58,14 +58,14 @@ for m=1:length(mainP.methods_set)
                 % -> compare with next index
                 [~, pt_idx] = min(abs(pts_center - paz(paz_idx+1)));
                 if pdb(paz_idx+1) > pdb(paz_idx) && pt_idx == p && ...
-                        pt_center - paz(paz_idx + 1) < 1e-3
+                        scat_p.pt_center - paz(paz_idx + 1) < 1e-3
                     paz_idx = paz_idx + 1;
                 end
             elseif paz(paz_idx) - scat_p.pt_center >= 0 && paz_idx > 0
                 % -> compare with previous index
                 [~, pt_idx] = min(abs(pts_center - paz(paz_idx-1)));
                 if pdb(paz_idx-1) > pdb(paz_idx) && pt_idx == p && ...
-                        pt_center - paz(paz_idx - 1) < 1e-3
+                       scat_p. pt_center - paz(paz_idx - 1) < 1e-3
                     paz_idx = paz_idx - 1;
                 end
             end

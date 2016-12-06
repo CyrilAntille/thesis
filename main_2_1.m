@@ -3,12 +3,21 @@ clear all
 mainP = MainParameters();
 mainP.pts_range = [40 40];
 mainP.pts_azimuth = [0 1];
-mainP.num_beams = 101; % can be a single value or list of values
+mainP.num_beams = 101;
 mainP.shift = Shift(ShiftType.LinearCst, 2*1e-3, 4, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 
 mainP.save_plots = false;
 grayscale_plots = false;
+
+if true && (mainP.shift.type == ShiftType.RadialVar || ...
+        mainP.shift.type == ShiftType.RadialCst)
+    % This allows to set mainP.pts_range above as radius instead.
+    % This step transforms radiuses to ranges.
+    mainP.pts_range = mainP.pts_range.*...
+        cos(sin(mainP.pts_azimuth./mainP.pts_range));
+end
+mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %%
