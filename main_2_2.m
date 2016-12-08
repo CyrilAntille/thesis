@@ -58,7 +58,7 @@ for m=1:length(mainP.methods_set)
     xlabel('azimuth [mm]');
     ylabel('range [mm]');
     title(['Method :', mainP.methods_set{m}, ', No Beams: ', ...
-        int2str(mainP.num_beams(b))])
+        int2str(mainP.num_beams)])
 
 
     subplot(1,2,2); hold on

@@ -8,7 +8,6 @@ end
 %% 1. FieldII initialization and Speckle raw data creation
 fprintf('============================================================\n')
 fprintf('Initializing Field II for main process\n')
-% field_init(0);
 evalc('field_init(0)');
 
 if mainP.speckle_create && ~exist('speckle_raw', 'var')
@@ -33,7 +32,6 @@ if exist('speckle_raw', 'var')
     resh_speckle = reshapeRawImg(mainP, speckle_raw);
     speckle_raw_image = resh_speckle.image;
 else
-%     speckle_raw_image = speckle_raw.image;
     mock_speckle = struct; mock_speckle.times = 0;
     mock_speckle.image = []; mock_speckle.LConvs = 0;
     mock_speckle = reshapeRawImg(mainP, mock_speckle);
@@ -65,16 +63,24 @@ if ~exist('data_DA', 'var')
         scat_pts(pidx, :) = [mainP.pts_azimuth(pidx) * 1e-3 0 ...
             mainP.pts_range(pidx) * 1e-3];
     end
-    data_phantom = PointPhantom(scat_pts, 1+db2mag(mainP.pts_gain));
+    phantom = PointPhantom(scat_pts, 1+db2mag(mainP.pts_gain));
     % -> pts mainP.pts_gain over speckle
 
     fprintf('Progress:\n');
     fprintf([repmat('.', 1, mainP.shift.num_shifts) '\n\n']);
     shifts = mainP.shift.getShifts(mainP.P);
     data_DA = cell([1, mainP.shift.num_shifts]);
+    if mainP.shift_per_beam
+        data_phantom = phantom;
+    else
+        data_phantom = cell([1, mainP.shift.num_shifts]);
+    end
     parfor s=1:mainP.shift.num_shifts
         % Raw
-        s_phantom = mainP.shift.shiftPositions(data_phantom, shifts(s));
+        s_phantom = mainP.shift.shiftPositions(phantom, shifts(s));
+        if ~mainP.shift_per_beam
+            data_phantom{s} = s_phantom;
+        end
         s_raw = CalcRespAll(mainP.P, s_phantom);
         s_raw = reshapeRawImg(mainP, s_raw);
         s_raw.image = s_raw.image + speckle_raw_image;

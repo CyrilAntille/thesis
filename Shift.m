@@ -37,6 +37,9 @@ classdef Shift
             end
             max_shift = floor(obj.num_shifts/(2*obj.stop_and_go_ratio));
             shifts = (-max_shift:max_shift) * shift_val;
+            if mod(obj.num_shifts, 2) == 0
+                shifts = shifts(2:end);
+            end
             shifts = repelem(shifts, obj.stop_and_go_ratio); % stop-and-go
         end
         function s_phantom = shiftPositions(obj, phantom, shift_val)

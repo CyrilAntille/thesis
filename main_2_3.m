@@ -9,7 +9,7 @@ if ~exist('mainP', 'var')
     mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 1);
 %     mainP.shift = Shift(ShiftType.RadialVar, 1/2, mainP.num_beams, 0, 1);
     mainP.shift_per_beam = true;
-    mainP.save_plots = false;
+    mainP.save_plots = true;
     
     if true && (mainP.shift.type == ShiftType.RadialVar || ...
             mainP.shift.type == ShiftType.RadialCst)
@@ -50,16 +50,18 @@ for m=1:length(mainP.methods_set)
     legends = {};
     m_peaks = [];
     for p=1:length(m_pts)
-        if isfield(m_pts{p}, 'peak')
-            m_peaks = horzcat(m_peaks, m_pts{p}.peak);
-        end
         plot(1e3*m_pts{p}.beam_trajectory(1,:), m_pts{p}.beam_trajectory(3,:), ...
             'LineWidth', 2, 'LineStyle', linestyle_list{p}, ...
             'Color', colors_list{p})
-        pt_range = find(m_pts{p}.beam_trajectory(1,:)>=m_pts{p}.peak(1),1);
-        max_ampl = max(m_pts{p}.beam_trajectory(3,pt_range-1:pt_range+1));
-        legends{end+1} = strcat('P', int2str(p), '-gain: ', ...
-            num2str(max_ampl, 5), ' dB');
+        if isfield(m_pts{p}, 'peak')
+            m_peaks = horzcat(m_peaks, m_pts{p}.peak);
+            pt_range = find(m_pts{p}.beam_trajectory(1,:)>=m_pts{p}.peak(1),1);
+            max_ampl = max(m_pts{p}.beam_trajectory(3,pt_range-1:pt_range+1));
+            legends{end+1} = strcat('P', int2str(p), '-gain: ', ...
+                num2str(max_ampl, 5), ' dB');
+        else
+            legends{end+1} = strcat('P', int2str(p), '-trajectory');
+        end
     end
     pts_az_sorted = m_peaks(:,1);
     pts_gain_sorted = m_peaks(:,1);
@@ -193,4 +195,5 @@ for m=1:length(mainP.methods_set)
     end
 end
 close
+fprintf('Main_2_3 finished!\n')
 

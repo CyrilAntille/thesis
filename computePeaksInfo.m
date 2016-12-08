@@ -22,19 +22,39 @@ for m=1:length(mainP.methods_set)
     % Note: trajectory same for all BFs except IAA-Upsampled
     for p=1:length(mainP.pts_range)
         scat_p = struct;
-        scat_p.p_trajectory = zeros([3 m_shift.num_shifts]); % [x, z, ampl]
-        scat_p.beam_trajectory = zeros([3 m_shift.num_shifts]);
-        for s=1:m_shift.num_shifts
-            s_phantom = m_shift.shiftPositions(data_phantom, shifts(s));
-            scat_p.p_trajectory(:,s) = [s_phantom.positions(p, 1), ...
-                s_phantom.positions(p, 3), s_phantom.amplitudes(p)];
+        % Scatterer point and beam trajectories
+        if mainP.shift_per_beam
+            scat_p.p_trajectory = zeros([3 m_shift.num_shifts]); % [x, z, ampl]
+            scat_p.beam_trajectory = zeros([3 m_shift.num_shifts]);
+            for s=1:m_shift.num_shifts
+                s_phantom = m_shift.shiftPositions(data_phantom, shifts(s));
+                scat_p.p_trajectory(:,s) = [s_phantom.positions(p, 1), ...
+                    s_phantom.positions(p, 3), s_phantom.amplitudes(p)];
 
-            s_az = tan(m_P.Tx.Theta(s)) * s_phantom.positions(p, 3);
-            s_radius = sqrt(s_phantom.positions(p, 3)^2 + s_az^2);
+                s_az = tan(m_P.Tx.Theta(s)) * s_phantom.positions(p, 3);
+                s_radius = sqrt(s_phantom.positions(p, 3)^2 + s_az^2);
+                s_radius_idx = find(data_DA.Radius >= s_radius,1);
+                if ~isempty(s_radius_idx)
+                    bf_ampl = max(bf_img(s_radius_idx:s_radius_idx+5, s));
+                    scat_p.beam_trajectory(:,s) = [s_az; s_radius; bf_ampl];
+                end
+            end
+        else
+            scat_p.beam_trajectory = zeros([3 mainP.num_beams]);
+            
+            point_pos = [data_phantom.positions(p, 1); ...
+                data_phantom.positions(p, 3); data_phantom.amplitudes(p)];
+            scat_p.p_trajectory = repmat(point_pos, 1, mainP.num_beams);
+            
+            s_radius = sqrt(data_phantom.positions(p, 1)^2 + ...
+                data_phantom.positions(p, 3)^2);
             s_radius_idx = find(data_DA.Radius >= s_radius,1);
             if ~isempty(s_radius_idx)
-                bf_ampl = max(bf_img(s_radius_idx:s_radius_idx+5, s));
-                scat_p.beam_trajectory(:,s) = [s_az; s_radius; bf_ampl];
+                scat_p.beam_trajectory = ones([1, mainP.num_beams]) .* s_radius;
+                scat_p.beam_trajectory(1,:) = ...
+                    tan(m_P.Tx.Theta) .* data_phantom.positions(p, 3);
+                scat_p.beam_trajectory(3,:) =  ...
+                    max(bf_img(s_radius_idx:s_radius_idx+5, :), [], 1);
             end
         end
         % Expected point azimuth when beam hits it
@@ -53,7 +73,8 @@ for m=1:length(mainP.methods_set)
 
         [~, paz_idx] = min(abs(paz - scat_p.pt_center));
         [~, pt_idx] = min(abs(pts_center - paz(paz_idx)));
-        if scat_p.pt_center - paz(paz_idx) < 1e-3 && pt_idx == p
+        if ~mainP.shift_per_beam || ...
+                (scat_p.pt_center - paz(paz_idx) < 1e-3 && pt_idx == p)
             if paz(paz_idx) - scat_p.pt_center < 0 && paz_idx < length(paz)
                 % -> compare with next index
                 [~, pt_idx] = min(abs(pts_center - paz(paz_idx+1)));
@@ -61,7 +82,7 @@ for m=1:length(mainP.methods_set)
                         scat_p.pt_center - paz(paz_idx + 1) < 1e-3
                     paz_idx = paz_idx + 1;
                 end
-            elseif paz(paz_idx) - scat_p.pt_center >= 0 && paz_idx > 0
+            elseif paz(paz_idx) - scat_p.pt_center >= 0 && paz_idx > 1
                 % -> compare with previous index
                 [~, pt_idx] = min(abs(pts_center - paz(paz_idx-1)));
                 if pdb(paz_idx-1) > pdb(paz_idx) && pt_idx == p && ...
@@ -71,7 +92,8 @@ for m=1:length(mainP.methods_set)
             end
             scat_p.peak = [paz(paz_idx); pdb(paz_idx)];
             % Peak 3dB width
-            p_3dbline = ones([1 size(scat_p.p_trajectory,2)]) .* (scat_p.peak(2) - 3);
+            p_3dbline = ones([1 size(scat_p.beam_trajectory,2)]) ...
+                .* (scat_p.peak(2) - 3);
             [p_x, ~, ~, ~] = intersections(scat_p.beam_trajectory(1,:), ...
                 scat_p.beam_trajectory(3,:), scat_p.beam_trajectory(1,:), p_3dbline, 1);
             if length(p_x) >= 2
