@@ -2,14 +2,14 @@
 % clear all
 if ~exist('mainP', 'var')
     mainP = MainParameters();
-    mainP.pts_range = [40 40]; 
-    mainP.pts_azimuth = [0 1];
+    mainP.pts_range = [40]; 
+    mainP.pts_azimuth = [0];
     mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
-    mainP.num_beams = 101;
-    mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 1);
+    mainP.num_beams = 505;
+    mainP.shift = Shift(ShiftType.LinearSpeed, 0.1, mainP.num_beams, 0, 1);
 %     mainP.shift = Shift(ShiftType.RadialVar, 1/2, mainP.num_beams, 0, 1);
     mainP.shift_per_beam = true;
-    mainP.save_plots = true;
+    mainP.save_plots = false;
     
     if true && (mainP.shift.type == ShiftType.RadialVar || ...
             mainP.shift.type == ShiftType.RadialCst)
@@ -25,6 +25,7 @@ end
 %%
 main_init
 data_peaks = computePeaksInfo(mainP, data_phantom, data_DA, data_BF);
+plotBFImages(mainP, data_DA, data_BF)
 
 %% Plots
 linestyle_list = {'-.','--','-',':'};
@@ -55,8 +56,8 @@ for m=1:length(mainP.methods_set)
             'Color', colors_list{p})
         if isfield(m_pts{p}, 'peak')
             m_peaks = horzcat(m_peaks, m_pts{p}.peak);
-            pt_range = find(m_pts{p}.beam_trajectory(1,:)>=m_pts{p}.peak(1),1);
-            max_ampl = max(m_pts{p}.beam_trajectory(3,pt_range-1:pt_range+1));
+            az_range = find(m_pts{p}.beam_trajectory(1,:)>=m_pts{p}.peak(1),1);
+            max_ampl = max(m_pts{p}.beam_trajectory(3,az_range-1:az_range+1));
             legends{end+1} = strcat('P', int2str(p), '-gain: ', ...
                 num2str(max_ampl, 5), ' dB');
         else
@@ -180,7 +181,7 @@ for m=1:length(mainP.methods_set)
     
     set(gca,'YDir','Reverse')
     xlabel('azimuth [mm]');
-    ylabel('range [mm]');
+    ylabel('range [mm]'); 
     title(mainP.methods_set{m});
 
     if mainP.save_plots

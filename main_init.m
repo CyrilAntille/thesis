@@ -129,12 +129,12 @@ if ~exist('data_BF', 'var')
         mstart = tic;
         if mainP.shift_per_beam
             m_BF = ComputeBF(data_DA.image, mainP, bf_method, 0);
-            m_BF = normalizeBFImage(m_BF, data_DA.Radius*1000);
+%             m_BF = normalizeBFImage(m_BF, data_DA.Radius*1000);
         else
             m_BF = cell([1, mainP.shift.num_shifts]);
             for s=1:mainP.shift.num_shifts
                 m_BF{s} = ComputeBF(data_DA{s}.image, mainP, bf_method, 0);
-                m_BF{s} = normalizeBFImage(m_BF{s}, data_DA{s}.Radius*1000);
+%                 m_BF{s} = normalizeBFImage(m_BF{s}, data_DA{s}.Radius*1000);
             end
         end
         data_BF{m} = m_BF;
@@ -142,10 +142,22 @@ if ~exist('data_BF', 'var')
         fprintf('%s: %d minutes and %0.3f seconds\n', mainP.methods_set{m},...
             floor(mend/60), rem(mend,60))
     end
+    data_peaks = computePeaksInfo(mainP, data_phantom, data_DA, data_BF);
+    parfor m=1:length(mainP.methods_set)
+        if mainP.shift_per_beam
+            data_BF{m} = normalizeBFImage(data_peaks{m}, data_BF{m}, ...
+                mainP.P.Tx.Theta, data_DA.Radius);
+        else
+            for s=1:mainP.shift.num_shifts
+                data_BF{m}{s} = normalizeBFImage(data_peaks{m}{s}, ...
+                    data_BF{m}{s}, mainP.P.Tx.Theta, data_DA{s}.Radius);
+            end
+        end
+    end
     if mainP.save_all_data
         output_file = mainP.outputFileName(false);
         fprintf('\nNSaving beamformed data into: %s\n', output_file)
-        save(output_file, 'data_BF', '-append')
+        save(output_file, 'data_BF', 'data_peaks', '-append')
     end
 end
 fprintf('============================================================\n')

@@ -4,7 +4,7 @@ mainP = MainParameters();
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.pts_range = [40];
 mainP.pts_azimuth = [0];
-mainP.num_beams = 505; % can be a single value or list of values
+mainP.num_beams = 101; % can be a single value or list of values
 mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 5);
 %     mainP.shift = Shift(ShiftType.RadialVar, 1/2, mainP.num_beams, 0, 1);
 mainP.shift_per_beam = true;
@@ -21,7 +21,7 @@ mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %% Various speeds
-speeds = -0.5:1/4:0.5; % Unit depends on ShiftType
+speeds = -0.5:1/2:0.5; % Unit depends on ShiftType
 for sp=1:length(speeds)
     fprintf('Stats_2_2: Running main_2_2 with speed value: %0.2f.\n', speeds(sp));
     mainP.shift.val = speeds(sp);

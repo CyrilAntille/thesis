@@ -16,7 +16,6 @@ for m=1:length(mainP.methods_set)
     end
     shifts = m_shift.getShifts(m_P);
     
-    bf_img = db(abs(m_BF));
     scatterer_points = cell([1 length(mainP.pts_range)]);
     pts_center = zeros([1 length(mainP.pts_range)]);
     % Note: trajectory same for all BFs except IAA-Upsampled
@@ -24,6 +23,7 @@ for m=1:length(mainP.methods_set)
         scat_p = struct;
         % Scatterer point and beam trajectories
         if mainP.shift_per_beam
+            bf_img = db(abs(m_BF));
             scat_p.p_trajectory = zeros([3 m_shift.num_shifts]); % [x, z, ampl]
             scat_p.beam_trajectory = zeros([3 m_shift.num_shifts]);
             for s=1:m_shift.num_shifts
@@ -34,12 +34,14 @@ for m=1:length(mainP.methods_set)
                 s_az = tan(m_P.Tx.Theta(s)) * s_phantom.positions(p, 3);
                 s_radius = sqrt(s_phantom.positions(p, 3)^2 + s_az^2);
                 s_radius_idx = find(data_DA.Radius >= s_radius,1);
+                s_radius_end = find(data_DA.Radius >= s_radius+1e-4,1);
                 if ~isempty(s_radius_idx)
-                    bf_ampl = max(bf_img(s_radius_idx:s_radius_idx+5, s));
+                    bf_ampl = max(bf_img(s_radius_idx:s_radius_end, s));
                     scat_p.beam_trajectory(:,s) = [s_az; s_radius; bf_ampl];
                 end
             end
         else
+            bf_img = db(abs(m_BF{s}));
             scat_p.beam_trajectory = zeros([3 mainP.num_beams]);
             
             point_pos = [data_phantom.positions(p, 1); ...

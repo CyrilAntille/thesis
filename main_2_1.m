@@ -4,11 +4,11 @@ mainP = MainParameters();
 mainP.pts_range = [40, 50];
 mainP.pts_azimuth = [0, 0];
 mainP.num_beams = 101;
-mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
+mainP.shift = Shift(ShiftType.RadialVar, 1/8, 17, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.save_plots = true;
-mainP.speckle_load = false;
+mainP.speckle_load = true;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
         mainP.shift.type == ShiftType.RadialCst
@@ -21,7 +21,7 @@ mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %% Various num_beams
-num_beams = 61:211;
+num_beams = 61;
 pts_gain = zeros(length(mainP.pts_range), length(mainP.methods_set), ...
     length(num_beams), mainP.shift.num_shifts);
 for b=1:length(num_beams)
@@ -42,6 +42,7 @@ for b=1:length(num_beams)
             end
         end
     end
+    plotBFImages(mainP, data_DA, data_BF)
     clearvars -except mainP num_beams pts_gain
 end
 
@@ -69,7 +70,7 @@ for b=1:length(num_beams)
         end
         s = 0;
         while true
-            if s - 1 > max(shifts)
+            if s > ceil(max(shifts))
                 break
             end
             l = line('XData', [s s], 'YData', ylim, 'LineWidth', 2, ...
@@ -94,6 +95,7 @@ for b=1:length(num_beams)
         end
     end
 end
+mainP.files_prefix = '';
 close
 
 %% Plots - Max loss vs beams
@@ -138,5 +140,6 @@ for p=1:length(mainP.pts_range)
         pause
     end
 end
+mainP.files_prefix = '';
 close
 fprintf('Main_2_1 finished!')
