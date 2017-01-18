@@ -41,7 +41,7 @@ for m=1:length(mainP.methods_set)
                 end
             end
         else
-            bf_img = db(abs(m_BF{s}));
+            bf_img = db(abs(m_BF));
             scat_p.beam_trajectory = zeros([3 mainP.num_beams]);
             
             point_pos = [data_phantom.positions(p, 1); ...

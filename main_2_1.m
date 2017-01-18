@@ -3,12 +3,13 @@ clear all
 mainP = MainParameters();
 mainP.pts_range = [40, 50];
 mainP.pts_azimuth = [0, 0];
-mainP.num_beams = 101;
+mainP.num_beams = 61;
 mainP.shift = Shift(ShiftType.RadialVar, 1/8, 17, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.save_plots = true;
-mainP.speckle_load = true;
+mainP.speckle_load = false;
+mainP.save_all_data = false;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
         mainP.shift.type == ShiftType.RadialCst
@@ -21,7 +22,7 @@ mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %% Various num_beams
-num_beams = 61;
+num_beams = 61:10:211;
 pts_gain = zeros(length(mainP.pts_range), length(mainP.methods_set), ...
     length(num_beams), mainP.shift.num_shifts);
 for b=1:length(num_beams)
@@ -30,15 +31,9 @@ for b=1:length(num_beams)
     mainP.P = mainP.copyP(mainP.num_beams);
     main_init
     for s=1:mainP.shift.num_shifts
-        s_BF = cell([1 length(mainP.methods_set)]);
-        for m=1:length(mainP.methods_set)
-            s_BF{m} = data_BF{m}{s};
-        end
-        data_peaks = computePeaksInfo(mainP, data_phantom{s}, ...
-            data_DA{s}, s_BF);
         for m=1:length(mainP.methods_set)
             for p=1:length(mainP.pts_range)
-                pts_gain(p, m, b, s) = data_peaks{m}{p}.peak(2);
+                pts_gain(p, m, b, s) = data_peaks{s}{m}{p}.peak(2);
             end
         end
     end

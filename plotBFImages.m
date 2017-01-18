@@ -29,7 +29,7 @@ for m=1:length(mainP.methods_set)
             thetaRange, 1e3 * s_DA.Radius, 2024, 2024, 'spline');
         warning('on')
         img = db(abs(scanConvertedImage));
-        imagesc(Xs, Zs, img)
+        clf(); imagesc(Xs, Zs, img)
         xlabel('azimuth [mm]');
     %             xlim([-15 15])
     %             ylim([35 45])
@@ -46,8 +46,12 @@ for m=1:length(mainP.methods_set)
         title(im_title)
 
         if mainP.save_plots
+            prefix = mainP.files_prefix;
+            mainP.files_prefix = strcat(mainP.files_prefix, ...
+                mainP.methods_set{m}, '_', int2str(s), '_');
             output_file = mainP.outputFileName(true);
             saveas(gcf, output_file, 'png')
+            mainP.files_prefix = prefix;
         else
             pause
         end
@@ -56,8 +60,6 @@ for m=1:length(mainP.methods_set)
             break
         end
     end
-mainP.files_prefix = '';
-close
-
 end
+close
 

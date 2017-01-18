@@ -5,7 +5,7 @@ if ~exist('mainP', 'var')
     mainP.pts_range = [40]; 
     mainP.pts_azimuth = [0];
     mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
-    mainP.num_beams = 505;
+    mainP.num_beams = 101;
     mainP.shift = Shift(ShiftType.LinearSpeed, 0.1, mainP.num_beams, 0, 1);
 %     mainP.shift = Shift(ShiftType.RadialVar, 1/2, mainP.num_beams, 0, 1);
     mainP.shift_per_beam = true;
