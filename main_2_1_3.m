@@ -8,7 +8,7 @@ mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.save_plots = true;
-mainP.speckle_load = false;
+mainP.speckle_load = true;
 mainP.save_all_data = false;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
@@ -42,6 +42,9 @@ for b=1:length(num_beams)
 end
 
 %% Plots
+linestyle_list = {'-.','--','-',':'};
+markers_list = {'+','x','diamond','o'};
+colors_list = {'b','r','g','k','m','c'};
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
 else

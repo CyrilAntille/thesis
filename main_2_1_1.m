@@ -1,10 +1,10 @@
 %% 2.1: Motion between frames - loss vs shift
 clear all
 mainP = MainParameters();
-mainP.pts_range = [40, 50];
-mainP.pts_azimuth = [0, 0];
+mainP.pts_range = [40, 45, 50];
+mainP.pts_azimuth = [0, 0, 0];
 mainP.num_beams = 61;
-mainP.shift = Shift(ShiftType.RadialVar, 1/8, 17, 0, 1); % Ref Shift.m
+mainP.shift = Shift(ShiftType.RadialVar, 1/2, 5, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.save_plots = true;
@@ -22,24 +22,18 @@ mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %% Loss vs shift
-num_beams = 61;
 pts_gain = zeros(length(mainP.pts_range), length(mainP.methods_set), ...
-    length(num_beams), mainP.shift.num_shifts);
-for b=1:length(num_beams)
-    mainP.num_beams = num_beams(b);
-    fprintf('Main_2_1: Beams number: %d.\n', mainP.num_beams);
-    mainP.P = mainP.copyP(mainP.num_beams);
-    main_init
-    for s=1:mainP.shift.num_shifts
-        for m=1:length(mainP.methods_set)
-            for p=1:length(mainP.pts_range)
-                pts_gain(p, m, b, s) = data_peaks{s}{m}{p}.peak(2);
-            end
+    mainP.shift.num_shifts);
+main_init
+for s=1:mainP.shift.num_shifts
+    for m=1:length(mainP.methods_set)
+        for p=1:length(mainP.pts_range)
+            pts_gain(p, m, s) = data_peaks{s}{m}{p}.peak(2);
         end
     end
-    plotBFImages(mainP, data_DA, data_BF)
-%     clearvars -except mainP num_beams pts_gain
 end
+plotBFImages(mainP, data_DA, data_BF)
+%     clearvars -except mainP num_beams pts_gain
 
 %% Plot
 linestyle_list = {'-.','--','-',':'};
@@ -51,46 +45,42 @@ else
     figure;
 end
 
-for b=1:length(num_beams)
-    clf();
-    mainP.num_beams = num_beams(b);
-    mainP.P = mainP.copyP(mainP.num_beams);
-    shifts = (0:mainP.shift.num_shifts-1) * mainP.shift.val;
-    for p=1:length(mainP.pts_range)
-        pl = plot(shifts, squeeze(pts_gain(p,:,b,:)), 'LineWidth', 2);
-        for pidx=1:length(pl)
-            pl(pidx).Marker = markers_list{pidx};
-            pl(pidx).LineStyle = linestyle_list{pidx};
-            pl(pidx).Color = colors_list{pidx};
+shifts = (0:mainP.shift.num_shifts-1) * mainP.shift.val;
+for p=1:length(mainP.pts_range)
+    pl = plot(shifts, squeeze(pts_gain(p,:,:)), 'LineWidth', 2);
+    for pidx=1:length(pl)
+        pl(pidx).Marker = markers_list{pidx};
+        pl(pidx).LineStyle = linestyle_list{pidx};
+        pl(pidx).Color = colors_list{pidx};
+    end
+    s = 0;
+    while true
+        if s > ceil(max(shifts))
+            break
         end
-        s = 0;
-        while true
-            if s > ceil(max(shifts))
-                break
-            end
-            l = line('XData', [s s], 'YData', ylim, 'LineWidth', 2, ...
-                'LineStyle', linestyle_list{mod(length(pl), ...
-                length(linestyle_list))+1}, ...
-                'Color', colors_list{mod(length(pl), length(colors_list))+1});
-            s = s + 1;
-        end
-        legend([mainP.methods_set, 'Transmitted beams'], 'Location', 'best');
-        ylabel('Scatterer point gain [dB]');
-        xlabel('Shift [ratio beams separation]');
-        t = strcat('Scatterer point at ', num2str(mainP.pts_range(p),0), 'mm range, ');
-    %     title(t)
+        l = line('XData', [s s], 'YData', ylim, 'LineWidth', 2, ...
+            'LineStyle', linestyle_list{mod(length(pl), ...
+            length(linestyle_list))+1}, ...
+            'Color', colors_list{mod(length(pl), length(colors_list))+1});
+        s = s + 1;
+    end
+    legend([mainP.methods_set, 'Transmitted beams'], 'Location', 'best');
+    ylabel('Scatterer point gain [dB]');
+    xlabel('Shift [ratio beams separation]');
+    t = strcat('Scatterer point at ', num2str(mainP.pts_range(p),0), 'mm range, ');
+%     title(t)
+%     ylim([42 63])
 
-        if mainP.save_plots
-            mainP.files_prefix = strcat('loss_shift_p', ...
-                int2str(mainP.pts_range(p)), '_');
-            output_file = mainP.outputFileName(true);
-            saveas(gcf, output_file, 'png')
-        else
-            pause
-        end
+    if mainP.save_plots
+        prefix = mainP.files_prefix;
+        mainP.files_prefix = strcat('loss_shift_p', ...
+            int2str(mainP.pts_range(p)), '_');
+        output_file = mainP.outputFileName(true);
+        saveas(gcf, output_file, 'png')
+        mainP.files_prefix = prefix;
+    else
+        pause
     end
 end
-mainP.files_prefix = '';
 close
-
-fprintf('Main_2_1-loss_vs_shift finished!')
+fprintf('Main_2_1_1 finished!')
