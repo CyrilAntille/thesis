@@ -10,6 +10,7 @@ mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.save_plots = true;
 mainP.speckle_load = false;
 mainP.save_all_data = false;
+mainP.normalize_bfim = false;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
         mainP.shift.type == ShiftType.RadialCst

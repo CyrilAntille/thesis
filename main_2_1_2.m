@@ -1,13 +1,14 @@
 %% 2.1: Motion between frames - max scalloping loss vs range
 clear all
 mainP = MainParameters();
-mainP.num_beams = 61;
-mainP.shift = Shift(ShiftType.RadialVar, 1/4, 4, 0, 1); % Ref Shift.m
+mainP.num_beams = 101;
+mainP.shift = Shift(ShiftType.RadialVar, 1/2, 4, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.save_plots = true;
-mainP.speckle_load = true;
+mainP.speckle_load = false;
 mainP.save_all_data = false;
+mainP.normalize_bfim = true;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
         mainP.shift.type == ShiftType.RadialCst
@@ -20,7 +21,7 @@ mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %% Max scalloping loss
-pts_range = 36:2:56;
+pts_range = 36:2:46;
 mainP.pts_azimuth = [0];
    
 max_loss = zeros(length(pts_range), length(mainP.methods_set));

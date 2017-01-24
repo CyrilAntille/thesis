@@ -45,6 +45,7 @@ classdef MainParameters
         nsd = 30; % Number of subdimensions. All but DAS and MV.
         upsample_number = 500; % Number of received beams for interpolation
         % by phase shifting. Only IAA MB/MB Upsampled.
+        normalize_bfim = true;
         
         save_all_data = false; % Can take multiple GB of memory
         save_plots = false; % If false, will display them instead

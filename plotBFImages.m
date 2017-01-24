@@ -33,7 +33,9 @@ for m=1:length(mainP.methods_set)
         xlabel('azimuth [mm]');
     %             xlim([-15 15])
     %             ylim([35 45])
-        caxis([-25  25]);
+        if mainP.normalize_bfim
+            caxis([-25  25]);
+        end
         colorbar
         colormap(gray)
         ylabel('range [mm]');

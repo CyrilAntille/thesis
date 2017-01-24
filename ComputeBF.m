@@ -18,6 +18,16 @@ elseif strcmp(bf_method, 'MV-MB')
     bf_im = getCaponMultiBeam(dataCube,0,mainP.dl,V, ...
         pi*mainP.P.Tx.SinTheta,pi*mainP.P.Tx.SinTheta,1,0,verbose,0);
     bf_im = abs(bf_im);
+elseif strfind(bf_method, 'MV')
+    sbl = strsplit(bf_method, '-');
+    sbl = round(str2double(sbl(end)) * mainP.P.Rx.no_elements);
+    if sbl >= mainP.P.Rx.no_elements
+        sbl = mainP.P.Rx.no_elements - 1;
+    end
+    warning('off');
+    bf_im = getCapon(dataCube,0,0,mainP.dl,sbl,2,5,mainP.dofb,verbose);
+    bf_im = abs(bf_im);
+    warning('on');
 elseif strcmp(bf_method, 'IAA-MBSB')
     [IAAImageAmp, IAAImagePow] = getIAAMultiBeam(dataCube,0,mainP.dl,V, ...
         mainP.P.Tx.Theta,mainP.P.Tx.Theta,pitchInLambdas,1,10,1,verbose,0);

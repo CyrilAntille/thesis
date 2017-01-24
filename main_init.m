@@ -142,29 +142,32 @@ if ~exist('data_BF', 'var')
         fprintf('%s: %d minutes and %0.3f seconds\n', mainP.methods_set{m},...
             floor(mend/60), rem(mend,60))
     end
-    if mainP.shift_per_beam
-        data_peaks = computePeaksInfo(mainP, data_phantom, data_DA, data_BF);
-        parfor m=1:length(mainP.methods_set)
-            data_BF{m} = normalizeBFImage(data_peaks{m}, data_BF{m}, ...
-                mainP.P.Tx.Theta, data_DA.Radius);
-        end
-    else
-        data_peaks = cell([1, mainP.shift.num_shifts]);
-        for s=1:mainP.shift.num_shifts
-            s_BF = cell([1 length(mainP.methods_set)]);
+    if mainP.normalize_bfim
+        % Computes peaksInfo to help background level estimation
+        % (peaksInfo re-computed after normalization)
+        if mainP.shift_per_beam
+            data_peaks = computePeaksInfo(mainP, data_phantom, data_DA, data_BF);
             parfor m=1:length(mainP.methods_set)
-                s_BF{m} = data_BF{m}{s};
+                data_BF{m} = normalizeBFImage(data_peaks{m}, data_BF{m}, ...
+                    mainP.P.Tx.Theta, data_DA.Radius);
             end
-            s_peaks = computePeaksInfo(mainP, ...
-                data_phantom{s}, data_DA{s}, s_BF);
-            data_peaks{s} = s_peaks;
-            parfor m=1:length(mainP.methods_set)
-                data_BF{m}{s} = normalizeBFImage(s_peaks{m}, ...
-                    data_BF{m}{s}, mainP.P.Tx.Theta, data_DA{s}.Radius);
+        else
+            data_peaks = cell([1, mainP.shift.num_shifts]);
+            for s=1:mainP.shift.num_shifts
+                s_BF = cell([1 length(mainP.methods_set)]);
+                parfor m=1:length(mainP.methods_set)
+                    s_BF{m} = data_BF{m}{s};
+                end
+                s_peaks = computePeaksInfo(mainP, ...
+                    data_phantom{s}, data_DA{s}, s_BF);
+                data_peaks{s} = s_peaks;
+                parfor m=1:length(mainP.methods_set)
+                    data_BF{m}{s} = normalizeBFImage(s_peaks{m}, ...
+                        data_BF{m}{s}, mainP.P.Tx.Theta, data_DA{s}.Radius);
+                end
             end
         end
     end
-    % Re-computes data_peaks after normalization
     if mainP.shift_per_beam
         data_peaks = computePeaksInfo(mainP, data_phantom, data_DA, data_BF);
     else

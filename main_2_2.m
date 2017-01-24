@@ -2,7 +2,7 @@
 % clear all
 if ~exist('mainP', 'var')
     mainP = MainParameters();
-    mainP.pts_range = [40 50]; % Add a range (in mm) for each point
+    mainP.pts_range = [40 40]; % Add a range (in mm) for each point
     mainP.pts_azimuth = [0 1];
     mainP.num_beams = 101; % can be a single value or list of values
     mainP.shift = Shift(ShiftType.LinearSpeed, 1, mainP.num_beams, 0, 1);
@@ -23,7 +23,6 @@ end
 
 %%
 main_init
-data_peaks = computePeaksInfo(mainP, data_phantom, data_DA, data_BF);
 
 %% Plots
 linestyle_list = {'-.','--','-',':'};
@@ -49,9 +48,9 @@ for m=1:length(mainP.methods_set)
     img = db(abs(scanConvertedImage));
 
     clf(); subplot(1,2,1)
-    imagesc(Xs, Zs, img)
+    imagesc(Xs.*1000, Zs.*1000, img)
     caxis([-25  25]);
-    xlim([-20 20])
+%     xlim([-20 20])
     ylim([min(mainP.pts_range)-5 max(mainP.pts_range)+5])
     colorbar
     colormap(gray)
@@ -60,10 +59,10 @@ for m=1:length(mainP.methods_set)
     title(['Method :', mainP.methods_set{m}, ', No Beams: ', ...
         int2str(mainP.num_beams)])
 
-
     subplot(1,2,2); hold on
     bf_img = db(abs(m_BF));
     thetaRange = rad2deg(thetaRange);
+%     thetaRange = sind(thetaRange) * 40; % TEST. mm
     pl_legend = {};
     y_min = Inf; y_max = -Inf; x_min = Inf; x_max = -Inf;
     for p=1:length(mainP.pts_range)
@@ -71,24 +70,27 @@ for m=1:length(mainP.methods_set)
         minr = find(data_DA.Radius >= (p_range - 2)*1e-3, 1);
         maxr = find(data_DA.Radius >= (p_range + 2)*1e-3, 1);
         p_bp = max(bf_img(minr:maxr, :), [], 1);
-        plot(thetaRange, p_bp, colors_list{p}, 'LineWidth', 2, ...
-            'LineStyle', linestyle_list{p}, 'Marker', markers_list{p});
-
-        p_y = pts_3dB{p,b,m}(1) - 3;
+        if p == 1 || abs(p_range - mainP.pts_range(1)) > 0.5
+            plot(thetaRange, p_bp, colors_list{p}, 'LineWidth', 2, ...
+                'LineStyle', linestyle_list{p}, 'Marker', markers_list{p});
+        end
+        p3db = data_peaks{m}{p}.peak_3db .* 1000;
+        p3db = atand(p3db./p_range);
+        p_y = data_peaks{m}{p}.peak(2) - 3;
         p_title = strcat('P', int2str(p), '-', ...
-            int2str(data_phantoms.positions(p,3)*1000), 'mm range');
+            int2str(data_phantom.positions(p,3)*1000), 'mm range');
         pl_legend{end+1} = p_title;
-        if length(inters_3dB{p,b,m}) == 2
-            line('XData', inters_3dB{p,b,m}, 'YData', [p_y p_y], ...
+        if length(p3db) >= 3
+            line('XData', p3db(1:2), 'YData', [p_y p_y], ...
                 'LineWidth', 2, 'LineStyle', '-', 'Color', [0,0,0]+0.4)
             p_l = strcat('P', int2str(p), '-3dB width= ', ...
-                num2str(pts_3dB{p,b,m}(2), 3), ' degrees');
+                num2str(p3db(3), 3), ' [deg]');
 
             pl_legend{end+1} = p_l;
-            x_min = min([x_min, inters_3dB{p,b,m}(1)]);
-            x_max = max([x_max, inters_3dB{p,b,m}(2)]);
+            x_min = min([x_min, p3db(1)]);
+            x_max = max([x_max, p3db(2)]);
             y_min = min([y_min, p_y]);
-            y_max = max([y_max, pts_3dB{p,b,m}(1)]);
+            y_max = max([y_max, p_y+3]);
         end
     end
     xlim([x_min-1, x_max+1])
@@ -97,7 +99,6 @@ for m=1:length(mainP.methods_set)
     ylabel('gain [dB]');
     legend(pl_legend, 'Location', 'best');
     hold off;
-
 
     if mainP.save_plots
         saveas(gcf, mainP.outputFileName(true), 'png')
@@ -207,40 +208,4 @@ else
 end
 close all
 set(0, 'DefaultFigureVisible', 'on')
-
-%% Beamformed images plots
-if ~mainP.save_plots
-    figure;
-    for m=1:length(mainP.methods_set)
-        m_BF = data_BF{m};
-        for b=1:length(mainP.num_beams)
-            m_P = mainP.copyP(mainP.num_beams(b));
-            m_BF = m_BF{b};
-            data_DA = data_DA{b};
-
-            thetaRange = m_P.Tx.Theta;
-            if strcmp(mainP.methods_set(m),'IAA-MBMB-Upsampled')
-                thetaRange = linspace(m_P.Tx.Theta(1), m_P.Tx.Theta(end), ...
-                    mainP.upsample_number);
-            end
-            warning('off')
-            [scanConvertedImage, Xs, Zs] = getScanConvertedImage(m_BF, ...
-                thetaRange, 1e3 * data_DA.Radius, 2024, 2024, 'spline');
-            warning('on')
-            img = db(abs(scanConvertedImage));
-            imagesc(Xs, Zs, img)
-            xlabel('azimuth [mm]');
-    %             xlim([-15 15])
-    %             ylim([35 45])
-            caxis([-25  25]);
-            colorbar
-            colormap(gray)
-            ylabel('range [mm]');
-            title(['Method :', mainP.methods_set{m}, ', No Beams: ', ...
-                int2str(mainP.num_beams(b))])
-            pause
-        end
-    end
-    close
-end
 fprintf('Main_2_2 finished!\n')

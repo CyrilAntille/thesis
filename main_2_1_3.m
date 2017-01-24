@@ -8,8 +8,9 @@ mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.save_plots = true;
-mainP.speckle_load = true;
+mainP.speckle_load = false;
 mainP.save_all_data = false;
+mainP.normalize_bfim = false;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
         mainP.shift.type == ShiftType.RadialCst
@@ -37,7 +38,7 @@ for b=1:length(num_beams)
             end
         end
     end
-    plotBFImages(mainP, data_DA, data_BF)
+%     plotBFImages(mainP, data_DA, data_BF)
     clearvars -except mainP num_beams pts_gain
 end
 

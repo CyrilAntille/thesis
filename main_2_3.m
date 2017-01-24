@@ -2,14 +2,19 @@
 % clear all
 if ~exist('mainP', 'var')
     mainP = MainParameters();
-    mainP.pts_range = [40]; 
-    mainP.pts_azimuth = [0];
-    mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
-    mainP.num_beams = 505;
-    mainP.shift = Shift(ShiftType.LinearSpeed, 0.1, mainP.num_beams, 0, 1);
-%     mainP.shift = Shift(ShiftType.RadialVar, 1/2, mainP.num_beams, 0, 1);
+    mainP.pts_range = [40, 40];
+    mainP.pts_azimuth = [0, 0.9586];
+    % Note: at 101 beams for 35 degrees, perfect points dist
+    % = 0.96789614739295739997530666425184 mm (4x beams dist)
+    % (-> 0.24197403684823934999382666606296 [mm] beams dist)
+%     mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
+    mainP.methods_set = {'DAS','MV-0.0104','MV-0.5','MV-1'};
+    mainP.num_beams = 51;
+%     mainP.shift = Shift(ShiftType.LinearSpeed, 0.1, mainP.num_beams, 0, 1);
+    mainP.shift = Shift(ShiftType.RadialVar, 0, mainP.num_beams, 0, 1);
     mainP.shift_per_beam = true;
     mainP.save_plots = false;
+    mainP.speckle_load = false;
     
     if true && (mainP.shift.type == ShiftType.RadialVar || ...
             mainP.shift.type == ShiftType.RadialCst)
@@ -24,7 +29,6 @@ end
 
 %%
 main_init
-% data_peaks = computePeaksInfo(mainP, data_phantom, data_DA, data_BF);
 plotBFImages(mainP, data_DA, data_BF)
 
 %% Plots
@@ -196,5 +200,32 @@ for m=1:length(mainP.methods_set)
     end
 end
 close
-fprintf('Main_2_3 finished!\n')
 
+%% Steered response plot
+figure; hold on;
+for m=1:length(mainP.methods_set)
+    m_pts = data_peaks{m};
+    p = 1;
+    plot(1e3*m_pts{p}.beam_trajectory(1,:), m_pts{p}.beam_trajectory(3,:), ...
+        'LineWidth', 2, 'LineStyle', linestyle_list{m}, ...
+        'Color', colors_list{m})
+end
+legend(mainP.methods_set, 'Location', 'best');
+% xlim([1e3*pts_az_sorted(1, 1)-2 1e3*pts_az_sorted(1,end)+2])
+xlabel('azimuth [mm]');
+ylabel('gain [dB]');
+grid on;
+hold off;
+if mainP.save_plots
+    prefix = mainP.files_prefix;
+    mainP.files_prefix = strcat(mainP.files_prefix, ...
+        mainP.methods_set{m}, '_');
+    output_file = mainP.outputFileName(true);
+    saveas(gcf, output_file, 'png')
+    mainP.files_prefix = prefix;
+else
+    pause
+end
+grid off;
+close
+fprintf('Main_2_3 finished!\n')
