@@ -9,7 +9,7 @@ mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.save_plots = true;
 mainP.speckle_load = false;
-mainP.save_all_data = false;
+mainP.save_all_data = true;
 mainP.normalize_bfim = false;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
@@ -77,7 +77,7 @@ for p=1:length(mainP.pts_range)
         mainP.files_prefix = strcat('loss_shift_p', ...
             int2str(mainP.pts_range(p)), '_');
         saveas(gcf, mainP.outputFileName('png'), 'png')
-        saveas(gcf, mainP.outputFileName('fig'), 'fig'))
+        saveas(gcf, mainP.outputFileName('fig'), 'fig')
         mainP.files_prefix = prefix;
     else
         pause

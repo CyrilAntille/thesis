@@ -9,7 +9,7 @@ mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.save_plots = true;
 mainP.speckle_load = false;
-mainP.save_all_data = false;
+mainP.save_all_data = true;
 mainP.normalize_bfim = false;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
