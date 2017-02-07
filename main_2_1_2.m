@@ -67,8 +67,8 @@ xlabel('Scatterer point radius [mm]');
 if mainP.save_plots
     prefix = mainP.files_prefix;
     mainP.files_prefix = strcat('scallop_vs_range_', mainP.files_prefix);
-    output_file = mainP.outputFileName(true);
-    saveas(gcf, output_file, 'png')
+    saveas(gcf, mainP.outputFileName('png'), 'png')
+    saveas(gcf, mainP.outputFileName('fig'), 'fig')
     mainP.files_prefix = prefix;
 else
     pause;

@@ -101,7 +101,8 @@ for m=1:length(mainP.methods_set)
     hold off;
 
     if mainP.save_plots
-        saveas(gcf, mainP.outputFileName(true), 'png')
+        saveas(gcf, mainP.outputFileName('png'), 'png')
+        saveas(gcf, mainP.outputFileName('fig'), 'fig')
     else
         pause
     end
@@ -196,12 +197,13 @@ for m=1:length(mainP.methods_set)
     end
 end
 if mainP.save_plots
-    output_file = mainP.outputFileName(true);
+    output_file = mainP.outputFileName('png');
     output_file = output_file(1:end-4); % Removes .png extension
     for p=1:length(mainP.pts_range)
         p_name = strcat(output_file, int2str(mainP.pts_azimuth(p)), ...
-            int2str(mainP.pts_range(p)), '.png');
-        saveas(figs(p), p_name, 'png')
+            int2str(mainP.pts_range(p)));
+        saveas(figs(p), strcat(p_name, 'png'), 'png')
+        saveas(figs(p), strcat(p_name, 'fig'), 'fig')
     end
 else
     pause

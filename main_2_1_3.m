@@ -4,7 +4,7 @@ mainP = MainParameters();
 mainP.pts_range = [40, 50];
 mainP.pts_azimuth = [0, 0];
 mainP.num_beams = 61;
-mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
+mainP.shift = Shift(ShiftType.RadialVar, 1/2, 4, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.save_plots = true;
@@ -81,8 +81,8 @@ for p=1:length(mainP.pts_range)
     if mainP.save_plots
         mainP.files_prefix = strcat('loss_beams_p', ...
             int2str(mainP.pts_range(p)), '_');
-        output_file = mainP.outputFileName(true);
-        saveas(gcf, output_file, 'png')
+        saveas(gcf, mainP.outputFileName('png'), 'png')
+        saveas(gcf, mainP.outputFileName('fig'), 'fig')
     else
         pause
     end

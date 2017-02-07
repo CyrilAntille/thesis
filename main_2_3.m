@@ -192,8 +192,8 @@ for m=1:length(mainP.methods_set)
         prefix = mainP.files_prefix;
         mainP.files_prefix = strcat(mainP.files_prefix, ...
             mainP.methods_set{m}, '_');
-        output_file = mainP.outputFileName(true);
-        saveas(gcf, output_file, 'png')
+        saveas(gcf, mainP.outputFileName('png'), 'png')
+        saveas(gcf, mainP.outputFileName('fig'), 'fig')
         mainP.files_prefix = prefix;
     else
         pause
@@ -220,8 +220,8 @@ if mainP.save_plots
     prefix = mainP.files_prefix;
     mainP.files_prefix = strcat(mainP.files_prefix, ...
         mainP.methods_set{m}, '_');
-    output_file = mainP.outputFileName(true);
-    saveas(gcf, output_file, 'png')
+    saveas(gcf, mainP.outputFileName('png'), 'png')
+    saveas(gcf, mainP.outputFileName('fig'), 'fig')
     mainP.files_prefix = prefix;
 else
     pause

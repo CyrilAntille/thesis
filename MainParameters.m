@@ -64,7 +64,7 @@ classdef MainParameters
             P.Tx.SinTheta = linspace(-P.Tx.SinThMax,P.Tx.SinThMax,P.Tx.NTheta);
             P.Tx.Theta = asin(P.Tx.SinTheta);
         end
-        function output_file = outputFileName(obj, is_plot)
+        function output_file = outputFileName(obj, file_type)
             % Output is .png if is_plot=true, else .mat
             % Output file name: <prefix>_<shift_per_beam(0=false,1=true)>_
             % <num_beams>_<shift.type>_<shift.val>.mat
@@ -72,9 +72,12 @@ classdef MainParameters
             output_file = [obj.files_prefix num2str(obj.shift_per_beam,3)...
                 '_' int2str(obj.num_beams) '_' char(obj.shift.type) '_' ...
                 num2str(obj.shift.val)];
-            if is_plot
+            if strcmp(file_type, 'png')
                 output_file = strcat(obj.save_folder, 'png/', ...
                     output_file, '.png');
+            elseif strcmp(file_type, 'fig')
+                output_file = strcat(obj.save_folder, 'fig/', ...
+                    output_file, '.fig');
             else
                 output_file = strcat(obj.save_folder, output_file, '.mat');
             end
@@ -90,6 +93,7 @@ classdef MainParameters
             save(strcat(obj.save_folder, 'MainP.mat'), 'obj')
             if obj.save_plots
                 mkdir(obj.save_folder, 'png')
+                mkdir(obj.save_folder, 'fig')
             end
 
             fid = fopen(strcat(obj.save_folder, 'MainP.txt'),'wt');
