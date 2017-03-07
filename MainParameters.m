@@ -39,7 +39,7 @@ classdef MainParameters
         % IAA-MBMB-Upsampled, MV-L, where L = subarray length ratio
 %         methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB','IAA-MBMB-Upsampled'};
         methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
-        dl = 5/100; % Diagonal loading. All but DAS.
+        dl = 5/100; % Diagonal loading. MV only.
         sbl = 1/2; % Subarray length ratio (-> 1/2 = L/2). MV only.
         dofb = true; % Do forward-backward averaging. MV only.
         % nsd = ceil(rad2deg(P.Tx.Theta(end))); % Number of subdimensions.

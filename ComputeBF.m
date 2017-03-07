@@ -29,18 +29,18 @@ elseif strfind(bf_method, 'MV')
     bf_im = abs(bf_im);
     warning('on');
 elseif strcmp(bf_method, 'IAA-MBSB')
-    [IAAImageAmp, IAAImagePow] = getIAAMultiBeam(dataCube,0,mainP.dl,V, ...
+    [IAAImageAmp, IAAImagePow] = getIAAMultiBeam(dataCube,0,0,V, ...
         mainP.P.Tx.Theta,mainP.P.Tx.Theta,pitchInLambdas,1,10,1,verbose,0);
     bf_im = sqrt(IAAImageAmp(:,:,10));
 elseif strcmp(bf_method, 'IAA-MBMB')
-    [IAAImageAmp, IAAImagePow] = getIAAMultiBeam(dataCube,0,mainP.dl,V, ...
+    [IAAImageAmp, IAAImagePow] = getIAAMultiBeam(dataCube,0,0,V, ...
         mainP.P.Tx.Theta,mainP.P.Tx.Theta,pitchInLambdas,1,10,0,verbose,0);
     bf_im = sqrt(IAAImagePow(:,:,10));
 elseif strcmp(bf_method, 'IAA-MBMB-Upsampled')
     NTheta = mainP.upsample_number;
     scanGridSin = linspace(mainP.P.Tx.SinTheta(1),mainP.P.Tx.SinTheta(end),NTheta);
     scanGridTheta = asin(scanGridSin);
-    [IAAImageAmp, IAAImagePow] = getIAAMultiBeam(dataCube,0,mainP.dl,V, ...
+    [IAAImageAmp, IAAImagePow] = getIAAMultiBeam(dataCube,0,0,V, ...
         mainP.P.Tx.Theta,scanGridTheta,pitchInLambdas,1,10,0,verbose,0);
     bf_im = sqrt(IAAImagePow(:,:,10));
 else
