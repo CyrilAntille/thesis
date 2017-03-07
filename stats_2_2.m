@@ -1,35 +1,46 @@
 %% 2.2 - Motion between beams - Stats
 clear all
 mainP = MainParameters();
-mainP.pts_range = [40, 50]; % Add a range (in mm) for each point
-mainP.shift = Shift(ShiftType.RadialVar, 1/2, -1, -180, 5);
-% mainP.shift = Shift(ShiftType.LinearSpeed, 1, -1, 0, 5);
-mainP.num_beams = 505; % can be a single value or list of values
+mainP.pts_range = [40]; % Add a range (in mm) for each point
+mainP.pts_azimuth = [0]; % Add a range (in mm) for each point
+mainP.num_beams = 3*71; % can be a single value or list of values
+mainP.shift = Shift(ShiftType.RadialVar, 0,  mainP.num_beams, 0, 3);
+% mainP.shift = Shift(ShiftType.LinearSpeed, 0,  mainP.num_beams, 0, 3);
 mainP.shift_per_beam = true;
+mainP.speckle_load = false;
 
-speeds = 0:1/4:2; % Unit depends on ShiftType
+if (mainP.shift.type == ShiftType.RadialVar || ...
+        mainP.shift.type == ShiftType.RadialCst)
+    % This allows to set mainP.pts_range above as radius instead.
+    % This step transforms radiuses to ranges.
+    mainP.pts_range = mainP.pts_range.*...
+        cos(sin(mainP.pts_azimuth./mainP.pts_range));
+end
+
 mainP.save_plots = true;
+mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %%
-pts_3dB_width = zeros([length(mainP.pts_range), length(mainP.num_beams),...
+speeds = -0.5:1/4:0.5; % Unit depends on ShiftType
+pts_3dB_width = zeros([length(mainP.pts_range),...
     length(mainP.methods_set), length(speeds)]);
 for sp=1:length(speeds)
     fprintf('Stats_2_2: Running main_2_2 with speed value: %0.2f.\n', speeds(sp));
     mainP.shift.val = speeds(sp);
     main_2_2
-    for p=1:size(pts_3dB,1)
-        for m=1:size(pts_3dB,2)
-            for b=1:size(pts_3dB,3)
-                pts_3dB_width(p,m,b,sp) = pts_3dB{p,m,b}(2);
+    for p=1:size(data_peaks,1)
+        for m=1:size(data_peaks,2)
+            if isfield(data_peaks{m}{p}, 'peak_3db')
+                pts_3dB_width(p,m,sp) = data_peaks{m}{p}.peak_3db(2);
             end
         end
     end
     clearvars -except mainP pts_3dB_width speeds
 end
-output_file = mainP.outputFileName(mainP.speckle_load);
-fprintf('\nNSaving speed  data  into: %s\n', output_file)
-save(output_file, 'mainP', 'pts_3dB_width', 'speeds', '-v7.3')
+mainP.files_prefix = 'speeds_';
+fprintf('\nNSaving speed  data  into: %s\n', mainP.outputFileName('mat'))
+save(mainP.outputFileName('mat'), 'mainP', 'pts_3dB_width', 'speeds', '-v7.3')
 
 %% Plots
 linestyle_list = {':','-','--','-.','-'};
@@ -42,26 +53,23 @@ else
 end
 
 for p=1:size(pts_3dB_width, 1)
-    for b=1:size(pts_3dB_width, 2)
-        p1 = plot(speeds, squeeze(pts_3dB_width(p,b,:,:))', 'LineWidth', 2);
-        for pidx=1:length(p1)
-            p1(pidx).Marker = markers_list{pidx};
-            p1(pidx).LineStyle = linestyle_list{pidx};
-        end
-        legend(mainP.methods_set, 'Location', 'best')
-        title('Beampattern mainlobes 3dB width')
-        x_unit = ShiftType.getShiftTypeUnit(mainP.shift.type);
-        xlabel(strcat('Speed [', x_unit, ']'))
-        ylabel('Mainlobe 3dB width [degrees]')
-        if mainP.save_plots
-            im_name = strcat('speeds_p', int2str(mainP.pts_range(p)), '_',...
-                int2str(mainP.num_beams(b)), '_', char(mainP.shift.type),...
-                '_', int2str(mainP.shift.direction));
-    %         saveas(gcf, strcat('../images/fig/', im_name, '.fig'), 'fig')
-            saveas(gcf, strcat(mainP.save_folder, 'png/', im_name, '.png'), 'png')
-        else
-            pause
-        end
+    p1 = plot(speeds, squeeze(pts_3dB_width(p,:,:))', 'LineWidth', 2);
+    for pidx=1:length(p1)
+        p1(pidx).Marker = markers_list{pidx};
+        p1(pidx).LineStyle = linestyle_list{pidx};
+    end
+    legend(mainP.methods_set, 'Location', 'best')
+    title('Beampattern mainlobes 3dB width')
+    x_unit = ShiftType.getShiftTypeUnit(mainP.shift.type);
+    xlabel(strcat('Speed [', x_unit, ']'))
+    ylabel('Mainlobe 3dB width [degrees]')
+    if mainP.save_plots
+        mainP.files_prefix = strcat('speeds_p', int2str(p), '_');
+        saveas(gcf, mainP.outputFileName('png'), 'png')
+        saveas(gcf, mainP.outputFileName('fig'), 'fig')
+        mainP.files_prefix = '';
+    else
+        pause
     end
 end
 close

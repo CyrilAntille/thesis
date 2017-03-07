@@ -8,18 +8,18 @@ if ~exist('mainP', 'var')
     % = 0.96789614739295739997530666425184 mm (4x beams dist)
     % (-> 0.24197403684823934999382666606296 [mm] beams dist)
 %     mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
-    mainP.methods_set = {'DAS','MV-0.0104','MV-0.5','MV-1'};
-    mainP.num_beams = 51;
-%     mainP.shift = Shift(ShiftType.LinearSpeed, 0.1, mainP.num_beams, 0, 1);
-    mainP.shift = Shift(ShiftType.RadialVar, 0, mainP.num_beams, 0, 1);
+%     mainP.methods_set = {'DAS','MV-0.0104','MV-0.5','MV-1'};
+    mainP.num_beams = 505;
+    mainP.shift = Shift(ShiftType.LinearSpeed, 0.5, mainP.num_beams, 0, 5);
+%     mainP.shift = Shift(ShiftType.RadialVar, 0, mainP.num_beams, 0, 1);
     mainP.shift_per_beam = true;
-    mainP.save_plots = false;
+    mainP.save_plots = true;
     mainP.speckle_load = false;
     
     if true && (mainP.shift.type == ShiftType.RadialVar || ...
             mainP.shift.type == ShiftType.RadialCst)
         % This allows to set mainP.pts_range above as radius instead.
-        % This step transforms radiuses to ranges.
+        % This step transforms radiuses to rangesdn
         mainP.pts_range = mainP.pts_range.*...
             cos(sin(mainP.pts_azimuth./mainP.pts_range));
     end
@@ -29,7 +29,7 @@ end
 
 %%
 main_init
-plotBFImages(mainP, data_DA, data_BF)
+% plotBFImages(mainP, data_DA, data_BF)
 
 %% Plots
 linestyle_list = {'-.','--','-',':'};
@@ -57,7 +57,7 @@ for m=1:length(mainP.methods_set)
     for p=1:length(m_pts)
         plot(1e3*m_pts{p}.beam_trajectory(1,:), m_pts{p}.beam_trajectory(3,:), ...
             'LineWidth', 2, 'LineStyle', linestyle_list{p}, ...
-            'Color', colors_list{p})
+            'Color', colors_list{p}) %, 'Marker', markers_list{p})
         if isfield(m_pts{p}, 'peak')
             m_peaks = horzcat(m_peaks, m_pts{p}.peak);
             az_range = find(m_pts{p}.beam_trajectory(1,:)>=m_pts{p}.peak(1),1);
@@ -67,6 +67,9 @@ for m=1:length(mainP.methods_set)
         else
             legends{end+1} = strcat('P', int2str(p), '-trajectory');
         end
+    end
+    if size(m_peaks) == 0
+        continue
     end
     pts_az_sorted = m_peaks(:,1);
     pts_gain_sorted = m_peaks(:,1);
@@ -215,17 +218,13 @@ legend(mainP.methods_set, 'Location', 'best');
 xlabel('azimuth [mm]');
 ylabel('gain [dB]');
 grid on;
-hold off;
+% hold off;
 if mainP.save_plots
     prefix = mainP.files_prefix;
-    mainP.files_prefix = strcat(mainP.files_prefix, ...
-        mainP.methods_set{m}, '_');
     saveas(gcf, mainP.outputFileName('png'), 'png')
     saveas(gcf, mainP.outputFileName('fig'), 'fig')
-    mainP.files_prefix = prefix;
 else
     pause
 end
-grid off;
-close
+close all
 fprintf('Main_2_3 finished!\n')

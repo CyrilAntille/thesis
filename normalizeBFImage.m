@@ -19,7 +19,7 @@ for p=1:length(m_peaks)
     end
 end
 bgd_av = mean(bf_im(bgd_mask > 0));
-bf_im = bf_im / bgd_av;
+bf_im = bf_im ./ bgd_av;
 
 end
 

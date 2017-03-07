@@ -60,8 +60,8 @@ if ~exist('data_DA', 'var')
     % Scatterer points creation
     scat_pts = zeros([length(mainP.pts_range) 3]);
     for pidx = 1:length(mainP.pts_range)
-        scat_pts(pidx, :) = [mainP.pts_azimuth(pidx) * 1e-3 0 ...
-            mainP.pts_range(pidx) * 1e-3];
+        scat_pts(pidx, :) = [mainP.pts_azimuth(pidx) 0 ...
+            mainP.pts_range(pidx)] .* 1e-3;
     end
     phantom = PointPhantom(scat_pts, 1+db2mag(mainP.pts_gain));
     % -> pts mainP.pts_gain over speckle
@@ -152,18 +152,38 @@ if ~exist('data_BF', 'var')
                     mainP.P.Tx.Theta, data_DA.Radius);
             end
         else
-            data_peaks = cell([1, mainP.shift.num_shifts]);
-            for s=1:mainP.shift.num_shifts
-                s_BF = cell([1 length(mainP.methods_set)]);
-                parfor m=1:length(mainP.methods_set)
-                    s_BF{m} = data_BF{m}{s};
-                end
-                s_peaks = computePeaksInfo(mainP, ...
-                    data_phantom{s}, data_DA{s}, s_BF);
-                data_peaks{s} = s_peaks;
-                parfor m=1:length(mainP.methods_set)
-                    data_BF{m}{s} = normalizeBFImage(s_peaks{m}, ...
-                        data_BF{m}{s}, mainP.P.Tx.Theta, data_DA{s}.Radius);
+            % Variant 1: Images are normalized independant of each other
+%             data_peaks = cell([1, mainP.shift.num_shifts]);
+%             parfor s=1:mainP.shift.num_shifts
+%                 s_BF = cell([1 length(mainP.methods_set)]);
+%                 for m=1:length(mainP.methods_set)
+%                     s_BF{m} = data_BF{m}{s};
+%                 end
+%                 s_peaks = computePeaksInfo(mainP, ...
+%                     data_phantom{s}, data_DA{s}, s_BF);
+%                 data_peaks{s} = s_peaks;
+%                 parfor m=1:length(mainP.methods_set)
+%                     data_BF{m}{s} = normalizeBFImage(s_peaks{m}, ...
+%                         data_BF{m}{s}, mainP.P.Tx.Theta, data_DA{s}.Radius);
+%                 end
+%             end
+            % Variant 2: Normalized based on first image of each beamformer
+            first_BF = cell([1 length(mainP.methods_set)]);
+            parfor m=1:length(mainP.methods_set)
+                first_BF{m} = data_BF{m}{1};
+            end
+            first_peaks = computePeaksInfo(mainP, ...
+                data_phantom{1}, data_DA{1}, first_BF);
+            parfor m=1:length(mainP.methods_set)
+                m_BF = first_BF{m};
+                max_peak = max(m_BF(:));
+                m_BF = normalizeBFImage(first_peaks{m}, ...
+                    m_BF, mainP.P.Tx.Theta, data_DA{1}.Radius);
+%                 m_BF = m_BF ./ max_peak;
+                norm_factor = max_peak / max(m_BF(:));
+                data_BF{m}{1} = m_BF;
+                for s=2:mainP.shift.num_shifts
+                    data_BF{m}{s} = data_BF{m}{s} ./ norm_factor;
                 end
             end
         end

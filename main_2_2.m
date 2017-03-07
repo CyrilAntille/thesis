@@ -2,13 +2,16 @@
 % clear all
 if ~exist('mainP', 'var')
     mainP = MainParameters();
-    mainP.pts_range = [40 40]; % Add a range (in mm) for each point
-    mainP.pts_azimuth = [0 1];
-    mainP.num_beams = 101; % can be a single value or list of values
-    mainP.shift = Shift(ShiftType.LinearSpeed, 1, mainP.num_beams, 0, 1);
-%     mainP.shift = Shift(ShiftType.RadialVar, 7/8, mainP.num_beams, 0, 1);
+    mainP.pts_range = [40]; % Add a range (in mm) for each point
+    mainP.pts_azimuth = [0];
+    mainP.num_beams = 3*71;
+    % Note: Azimuth distance at 40 mm range: 23.6416 mm
+    % 0.2 ms per beam -> beams 'velocity' = 1.665 m/s
+%     mainP.shift = Shift(ShiftType.LinearSpeed, 0.5, mainP.num_beams, 45, 3);
+    mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 3);
     mainP.shift_per_beam = true;
-    mainP.save_plots = false;
+    mainP.save_plots = true;
+    mainP.speckle_load = false;
     
     if true && (mainP.shift.type == ShiftType.RadialVar || ...
             mainP.shift.type == ShiftType.RadialCst)
@@ -23,6 +26,7 @@ end
 
 %%
 main_init
+plotBFImages(mainP, data_DA, data_BF)
 
 %% Plots
 linestyle_list = {'-.','--','-',':'};
@@ -73,36 +77,45 @@ for m=1:length(mainP.methods_set)
         if p == 1 || abs(p_range - mainP.pts_range(1)) > 0.5
             plot(thetaRange, p_bp, colors_list{p}, 'LineWidth', 2, ...
                 'LineStyle', linestyle_list{p}, 'Marker', markers_list{p});
+            p_title = strcat('P', int2str(p), '-', ...
+                int2str(data_phantom.positions(p,3)*1000), 'mm range');
+            pl_legend{end+1} = p_title;
         end
-        p3db = data_peaks{m}{p}.peak_3db .* 1000;
-        p3db = atand(p3db./p_range);
-        p_y = data_peaks{m}{p}.peak(2) - 3;
-        p_title = strcat('P', int2str(p), '-', ...
-            int2str(data_phantom.positions(p,3)*1000), 'mm range');
-        pl_legend{end+1} = p_title;
-        if length(p3db) >= 3
-            line('XData', p3db(1:2), 'YData', [p_y p_y], ...
-                'LineWidth', 2, 'LineStyle', '-', 'Color', [0,0,0]+0.4)
-            p_l = strcat('P', int2str(p), '-3dB width= ', ...
-                num2str(p3db(3), 3), ' [deg]');
+        if isfield(data_peaks{m}{p}, 'peak') && ...
+                isfield(data_peaks{m}{p}, 'peak_3db')
+            p_y = data_peaks{m}{p}.peak(2) - 3;
+            p3db = data_peaks{m}{p}.peak_3db .* 1000;
+            p3db = atand(p3db./p_range);
+            if length(p3db) >= 3
+                line('XData', p3db(1:2), 'YData', [p_y p_y], ...
+                    'LineWidth', 2, 'LineStyle', '-', 'Color', [0,0,0]+0.4)
+                p_l = strcat('P', int2str(p), '-3dB width= ', ...
+                    num2str(p3db(3), 3), ' [deg]');
 
-            pl_legend{end+1} = p_l;
-            x_min = min([x_min, p3db(1)]);
-            x_max = max([x_max, p3db(2)]);
-            y_min = min([y_min, p_y]);
-            y_max = max([y_max, p_y+3]);
+                pl_legend{end+1} = p_l;
+                x_min = min([x_min, p3db(1)]);
+                x_max = max([x_max, p3db(2)]);
+                y_min = min([y_min, p_y]);
+                y_max = max([y_max, p_y+3]);
+            end
         end
     end
-    xlim([x_min-1, x_max+1])
-    ylim([y_min-3 y_max])
+    if x_min < Inf && x_max > -Inf
+        xlim([x_min-1, x_max+1])
+    end
+    if y_min < Inf && y_max > -Inf
+        ylim([y_min-3 y_max])
+    end
     xlabel('angle [deg]');
     ylabel('gain [dB]');
     legend(pl_legend, 'Location', 'best');
     hold off;
 
     if mainP.save_plots
+        mainP.files_prefix = strcat(mainP.methods_set{m}, '_');
         saveas(gcf, mainP.outputFileName('png'), 'png')
         saveas(gcf, mainP.outputFileName('fig'), 'fig')
+        mainP.files_prefix = '';
     else
         pause
     end
@@ -112,15 +125,10 @@ close
 
 %% Points contour plots
 if mainP.save_plots
-    set(0, 'DefaultFigureVisible', 'off')
+    figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
 else
-    set(0, 'DefaultFigureVisible', 'on')
+    figure;
 end
-figs = [];
-for p=1:length(mainP.pts_range)
-    figs(end+1) = figure(p);
-end
-
 for m=1:length(mainP.methods_set)
     m_BF = data_BF{m};
     m_P = mainP.P;
@@ -148,16 +156,20 @@ for m=1:length(mainP.methods_set)
     end
     shifts = b_shift.getShifts(m_P);
     max_gain = max(img(:));
+    az_lim = [NaN, -NaN];
+    r_lim = [NaN, -NaN];
     for p=1:length(mainP.pts_range)
         for s=1:b_shift.num_shifts
-%             for s=floor(b_shift.num_shifts*1/3):ceil(b_shift.num_shifts*2/3)
             s_phantom = b_shift.shiftPositions(data_phantom, shifts(s));
             p_size = 0.05; %mm
-%                 s_az = find(abs(Xs - s_phantom.positions(p, 1)*1e3) < p_size, 10);
+            
             beam_az = atan(m_P.Tx.Theta(s)) * s_phantom.positions(p, 3)*1e3;
-            s_az = find(abs(Xs - beam_az) < p_size, 10);
-            s_r = find(abs(Zs - s_phantom.positions(p, 3)*1e3) < p_size, 10);
-            if ~isempty(s_r) && ~isempty(s_az)
+            pos_az = s_phantom.positions(p, 1)*1e3;
+            pos_r = s_phantom.positions(p, 3)*1e3;
+            s_az = find(abs(Xs - pos_az) < p_size, 10); % beam azimuth
+%             s_az = find(abs(Xs - beam_az) < p_size, 10); % pos azimuth
+            s_r = find(abs(Zs - pos_r) < p_size, 10);
+            if ~isempty(s_r) && ~isempty(s_az) && abs(beam_az - pos_az) < 1
                 % Create circle mask (instead of square)
                 p_r = s_r * ones(1, length(s_az));
                 p_az = s_az * ones(1, length(s_r));
@@ -165,49 +177,39 @@ for m=1:length(mainP.methods_set)
                 p_circle = (p_r-mean(s_r)).^2 + (p_az'-mean(s_az)).^2 <= 10;
                 img(s_r, s_az) = p_circle * (max_gain + 3) + ...
                      abs(p_circle - 1).*img(s_r, s_az);
+                az_lim = [min(az_lim(1), pos_az - p_size), ...
+                    max(az_lim(2), pos_az + p_size)];
+                r_lim = [min(r_lim(1), pos_r - p_size), ...
+                    max(r_lim(2), pos_r + p_size)];
             end
         end
-
-        p_range = mainP.pts_range(p);
-
-        if p_range == mainP.P.Tx.FocRad * 1000
-            max_az = 1.5 + cosd(mainP.shift.direction);
-        else
-            max_az = 3 + 2 * cosd(mainP.shift.direction);
-        end
-        max_r = 0.5 + abs(sind(mainP.shift.direction));
-
-        minXs = find(Xs >= -max_az, 1);
-        maxXs = find(Xs >= max_az, 1);
-        pXs = Xs(minXs:maxXs);
-        minZs = find(Zs >= p_range-max_r, 1);
-        maxZs = find(Zs >=p_range+max_r, 1);
-        pZs = Zs(minZs:maxZs);
-        p_img = img(minZs:maxZs, minXs:maxXs);
-
-        set(0, 'currentfigure', figs(p));
-        subplot(2,ceil(length(mainP.methods_set)/2),m);
-%         contourf(pXs, pZs, p_img, [-100, pts_3dB{p,b,m}(1)-10, ...
-%             pts_3dB{p,b,m}(1)-3, max_gain + 3], 'ShowText','on');
-        contourf(pXs, pZs, p_img, [-100, max_gain-10, max_gain + 3], 'ShowText','on');
-        set(gca,'YDir','Reverse')
-        xlabel('azimuth [mm]');
-        ylabel('range [mm]');
-        title(mainP.methods_set{m});
     end
+
+    pad = 0.4; % padding in mm
+    az_lim = [max(Xs(1), az_lim(1) - pad), min(Xs(end), az_lim(2) + pad)];
+    r_lim = [max(Zs(1), r_lim(1) - pad), min(Zs(end), r_lim(2) + pad)];
+    minXs = find(Xs >= az_lim(1), 1);
+    maxXs = find(Xs >= az_lim(2), 1);
+    pXs = Xs(minXs:maxXs);
+    minZs = find(Zs >= r_lim(1), 1);
+    maxZs = find(Zs >= r_lim(end), 1);
+    pZs = Zs(minZs:maxZs);
+    p_img = img(minZs:maxZs, minXs:maxXs);
+    p_img(p_img < -200) = -200; % contourf doesn't handle non-finite values
+
+    subplot(2,ceil(length(mainP.methods_set)/2),m);
+    contourf(pXs, pZs, p_img, [-100, max_gain-10, max_gain + 3], 'ShowText','on');
+    colormap parula
+    set(gca,'YDir','Reverse')
+    xlabel('azimuth [mm]');
+    ylabel('range [mm]');
+    title(mainP.methods_set{m});
 end
 if mainP.save_plots
-    output_file = mainP.outputFileName('png');
-    output_file = output_file(1:end-4); % Removes .png extension
-    for p=1:length(mainP.pts_range)
-        p_name = strcat(output_file, int2str(mainP.pts_azimuth(p)), ...
-            int2str(mainP.pts_range(p)));
-        saveas(figs(p), strcat(p_name, 'png'), 'png')
-        saveas(figs(p), strcat(p_name, 'fig'), 'fig')
-    end
+    saveas(gcf,  mainP.outputFileName('png'), 'png')
+    saveas(gcf, mainP.outputFileName('fig'), 'fig')
 else
     pause
 end
-close all
-set(0, 'DefaultFigureVisible', 'on')
+close
 fprintf('Main_2_2 finished!\n')

@@ -2,7 +2,7 @@
 clear all
 mainP = MainParameters();
 mainP.num_beams = 101;
-mainP.shift = Shift(ShiftType.RadialVar, 1/2, 4, 0, 1); % Ref Shift.m
+mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.save_plots = true;
@@ -21,7 +21,7 @@ mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %% Max scalloping loss
-pts_range = 36:2:56;
+pts_range = 36:2:58;
 mainP.pts_azimuth = [0];
 
 max_loss = zeros(length(pts_range), length(mainP.methods_set));

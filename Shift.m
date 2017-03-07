@@ -58,6 +58,23 @@ classdef Shift
                 end
                 [z,x,y] = sph2cart(Theta,Phi,R);
                 s_phantom.positions = [x,y,z];
+                % New approach
+%                 for p=1:size(s_phantom.positions, 1)
+%                     pos = num2cell(s_phantom.positions(p, :));
+%                     [x, y, z] = deal(pos{:});
+%                     Theta = atan(x/z);
+%                     R = z / cos(Theta);
+%                     if obj.direction > -90 && obj.direction < 90
+%                     % For radial motion, the only two possible directions
+%                     % are left to right (0) or right to left (-180).
+%                         Theta = Theta + shift_val;
+%                     else
+%                         Theta = Theta - shift_val;
+%                     end
+%                     x = sin(Theta) * R;
+%                     z = cos(Theta) * R;
+%                     s_phantom.positions(p,:) = [x,y,z];
+%                 end
             else %linear shift (along obj.direction)
                 s_phantom.positions = [s_phantom.positions(:,1) ...
                     + shift_val * cosd(obj.direction), ...

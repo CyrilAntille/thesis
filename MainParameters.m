@@ -35,8 +35,10 @@ classdef MainParameters
         % This results in shift.num_shifts images per num_beam value.
         
         % Beamforming parameters
-        % Beamformer options: DAS, MV, MV-MB, IAA-MBSB, IAA-MBMB, IAA-MBMB-Upsampled
-        methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB','IAA-MBMB-Upsampled'};
+        % Beamformer options: DAS, MV, MV-MB, IAA-MBSB, IAA-MBMB,
+        % IAA-MBMB-Upsampled, MV-L, where L = subarray length ratio
+%         methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB','IAA-MBMB-Upsampled'};
+        methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
         dl = 5/100; % Diagonal loading. All but DAS.
         sbl = 1/2; % Subarray length ratio (-> 1/2 = L/2). MV only.
         dofb = true; % Do forward-backward averaging. MV only.
