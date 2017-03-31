@@ -71,7 +71,7 @@ for lidx = 1:length(L_set)
     plot(theta_range, db(real(spectrum./norm_factor)), 'Color', ...
         color_list{lidx+1}, 'LineWidth', 1.5, 'LineStyle', linestyle_list{lidx+1});
 %     'Marker', markers_list{lidx+1});
-    lgd{end+1} = strcat('Capon L=', int2str(L));
+    lgd{end+1} = strcat('MV method L=', int2str(L));
 end
  
 % TODO: Increase M (and keep N = 100*M), correct Rx, Normalize by DAS max

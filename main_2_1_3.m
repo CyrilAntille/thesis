@@ -6,12 +6,12 @@ if ~exist('mainP', 'var')
     mainP.pts_range = [40, 50];
     mainP.pts_azimuth = [0, 0];
     mainP.num_beams = 61;
-    mainP.shift = Shift(ShiftType.RadialVar, 1/2, 4, 0, 1); % Ref Shift.m
+    mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
     mainP.shift_per_beam = false;
     mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
     mainP.save_plots = true;
     mainP.speckle_load = false;
-    mainP.save_all_data = true;
+    mainP.save_all_data = false;
     mainP.normalize_bfim = false;
 
     if mainP.shift.type == ShiftType.RadialVar || ...
@@ -26,7 +26,7 @@ mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %% Max loss vs beams
-num_beams = 211:10:311;
+num_beams = 251:10:331;
 pts_gain = zeros(length(mainP.pts_range), length(mainP.methods_set), ...
     length(num_beams), mainP.shift.num_shifts);
 for b=1:length(num_beams)
@@ -64,7 +64,7 @@ for p=1:length(mainP.pts_range)
                 min(pts_gain(p, m, b, :));
         end
     end
-    pl = plot(num_beams, scallop_loss, 'LineWidth', 2);
+    pl = plot(num_beams, scallop_loss', 'LineWidth', 2);
     for pidx=1:length(pl)
         pl(pidx).Marker = markers_list{pidx};
         pl(pidx).LineStyle = linestyle_list{pidx};

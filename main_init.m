@@ -129,12 +129,10 @@ if ~exist('data_BF', 'var')
         mstart = tic;
         if mainP.shift_per_beam
             m_BF = ComputeBF(data_DA.image, mainP, bf_method, 0);
-%             m_BF = normalizeBFImage(m_BF, data_DA.Radius*1000);
         else
             m_BF = cell([1, mainP.shift.num_shifts]);
             for s=1:mainP.shift.num_shifts
                 m_BF{s} = ComputeBF(data_DA{s}.image, mainP, bf_method, 0);
-%                 m_BF{s} = normalizeBFImage(m_BF{s}, data_DA{s}.Radius*1000);
             end
         end
         data_BF{m} = m_BF;
@@ -142,63 +140,74 @@ if ~exist('data_BF', 'var')
         fprintf('%s: %d minutes and %0.3f seconds\n', mainP.methods_set{m},...
             floor(mend/60), rem(mend,60))
     end
-    if mainP.normalize_bfim
-        % Computes peaksInfo to help background level estimation
-        % (peaksInfo re-computed after normalization)
-        if mainP.shift_per_beam
-            data_peaks = computePeaksInfo(mainP, data_phantom, data_DA, data_BF);
-            parfor m=1:length(mainP.methods_set)
-                data_BF{m} = normalizeBFImage(data_peaks{m}, data_BF{m}, ...
-                    mainP.P.Tx.Theta, data_DA.Radius);
-            end
-        else
-            % Variant 1: Images are normalized independant of each other
-%             data_peaks = cell([1, mainP.shift.num_shifts]);
-%             parfor s=1:mainP.shift.num_shifts
-%                 s_BF = cell([1 length(mainP.methods_set)]);
-%                 for m=1:length(mainP.methods_set)
-%                     s_BF{m} = data_BF{m}{s};
-%                 end
-%                 s_peaks = computePeaksInfo(mainP, ...
-%                     data_phantom{s}, data_DA{s}, s_BF);
-%                 data_peaks{s} = s_peaks;
-%                 parfor m=1:length(mainP.methods_set)
-%                     data_BF{m}{s} = normalizeBFImage(s_peaks{m}, ...
-%                         data_BF{m}{s}, mainP.P.Tx.Theta, data_DA{s}.Radius);
-%                 end
-%             end
-            % Variant 2: Normalized based on first image of each beamformer
-            first_BF = cell([1 length(mainP.methods_set)]);
-            parfor m=1:length(mainP.methods_set)
-                first_BF{m} = data_BF{m}{1};
-            end
-            first_peaks = computePeaksInfo(mainP, ...
-                data_phantom{1}, data_DA{1}, first_BF);
-            parfor m=1:length(mainP.methods_set)
-                m_BF = first_BF{m};
-                max_peak = max(m_BF(:));
-                m_BF = normalizeBFImage(first_peaks{m}, ...
-                    m_BF, mainP.P.Tx.Theta, data_DA{1}.Radius);
-%                 m_BF = m_BF ./ max_peak;
-                norm_factor = max_peak / max(m_BF(:));
-                data_BF{m}{1} = m_BF;
-                for s=2:mainP.shift.num_shifts
-                    data_BF{m}{s} = data_BF{m}{s} ./ norm_factor;
-                end
-            end
-        end
-    end
+end
+%% Test
+% prefix = mainP.files_prefix;
+% mainP.files_prefix = strcat('before_', mainP.files_prefix);
+% upval = mainP.interp_upsample;
+% mainP.interp_upsample = 0;
+% plotBFImages(mainP, data_DA, data_BF)
+% mainP.interp_upsample = upval;
+% mainP.files_prefix = prefix;
+%%
+if true
+    fprintf('Images upsampling and normalization\n')
+    % mainP.norm_variant: 1 = Standalone normalization, 2 = DAS-Based normalization,
+    % 3 = First-shift based normalization (only if shift_per_beam = false)
     if mainP.shift_per_beam
-        data_peaks = computePeaksInfo(mainP, data_phantom, data_DA, data_BF);
-    else
-        data_peaks = cell([1, mainP.shift.num_shifts]);
-        for s=1:mainP.shift.num_shifts
-            s_BF = cell([1 length(mainP.methods_set)]);
-            parfor m=1:length(mainP.methods_set)
-                s_BF{m} = data_BF{m}{s};
+        norm_info = [max(data_BF{1}(:)), 0, mainP.normalize_bfim];
+        % norm_info = [orig_max, norm_factor, do_normalization]
+        data_peaks = cell([1, mainP.num_beams]);
+        for m=1:length(mainP.methods_set)
+            if mainP.norm_variant == 2 && m > 1
+                mainP.normalize_bfim = false;
+                m_BF = normalizeBFImage(mainP, data_BF{m}, ...
+                    data_DA.Radius, data_phantom);
+                if norm_info(3)
+                    m_BF = m_BF .* norm_info(2);
+%                     m_BF = m_BF - norm_info(2); % dB
+                end
+                mainP.normalize_bfim = norm_info(3);
+            else
+                fprintf('whaaat - ')
+                m_BF = normalizeBFImage(mainP, data_BF{m}, ...
+                    data_DA.Radius, data_phantom);
+                norm_info(2) = max(m_BF(:)) / norm_info(1);
+%                 norm_info(2) = max(m_BF(:)) - norm_info(1); % dB
             end
-            data_peaks{s} = computePeaksInfo(mainP, ...
-                data_phantom{s}, data_DA{s}, s_BF);
+            data_peaks{m} = computePeaksInfo(mainP, data_phantom, ...
+                data_DA.Radius, m_BF);
+            data_BF{m} = m_BF;
+        end
+    else
+        norm_info = [max(data_BF{1}{1}(:)), 0, mainP.normalize_bfim];
+        % norm_info = [orig_max, norm_factor, do_normalization]
+        data_peaks = cell([1, mainP.shift.num_shifts]);
+        for m=1:length(mainP.methods_set)
+            if mainP.norm_variant == 3
+                norm_info(1) = max(data_BF{m}{1}(:));
+            end
+            for s=1:mainP.shift.num_shifts
+                s_BF =  data_BF{m}{s};
+                if s > 1 && (mainP.norm_variant == 2 || mainP.norm_variant == 3)
+                    mainP.normalize_bfim = false;
+                    s_BF = normalizeBFImage(mainP, s_BF, ...
+                        data_DA{s}.Radius, data_phantom{s});
+                    if norm_info(3)
+                        s_BF = s_BF .* norm_info(2);
+%                         s_BF = s_BF - norm_info(2); % dB
+                    end
+                    mainP.normalize_bfim = norm_info(3);
+                else
+                    s_BF = normalizeBFImage(mainP, s_BF, ...
+                        data_DA{s}.Radius, data_phantom{s});
+                    norm_info(2) = max(s_BF(:)) / norm_info(1);
+%                     norm_info(2) = max(s_BF(:)) - norm_info(1); % dB
+                end
+                data_peaks{m}{s} = computePeaksInfo(mainP, ...
+                    data_phantom{s}, data_DA{s}.Radius, s_BF);
+                data_BF{m}{s} = s_BF;
+            end
         end
     end
     if mainP.save_all_data

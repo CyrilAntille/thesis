@@ -4,14 +4,16 @@ if ~exist('mainP', 'var')
     mainP = MainParameters();
     mainP.pts_range = [40]; % Add a range (in mm) for each point
     mainP.pts_azimuth = [0];
-    mainP.num_beams = 3*71;
+    mainP.num_beams = 71;
     % Note: Azimuth distance at 40 mm range: 23.6416 mm
     % 0.2 ms per beam -> beams 'velocity' = 1.665 m/s
 %     mainP.shift = Shift(ShiftType.LinearSpeed, 0.5, mainP.num_beams, 45, 3);
-    mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 3);
+    mainP.shift = Shift(ShiftType.LinearSpeed, 0.5, mainP.num_beams, 0, 1);
     mainP.shift_per_beam = true;
-    mainP.save_plots = true;
-    mainP.speckle_load = false;
+    mainP.save_plots = false;
+    mainP.speckle_load = true;
+    mainP.interp_upsample = 0;
+    mainP.normalize_bfim = false;
     
     if true && (mainP.shift.type == ShiftType.RadialVar || ...
             mainP.shift.type == ShiftType.RadialCst)
@@ -44,12 +46,18 @@ for m=1:length(mainP.methods_set)
     if strcmp(mainP.methods_set(m),'IAA-MBMB-Upsampled')
         m_P = mainP.copyP(mainP.upsample_number);
     end
-    thetaRange = m_P.Tx.Theta;
+    thetas = m_P.Tx.Theta;
+    if mainP.interp_upsample > 0
+        thetas = linspace(mainP.P.Tx.Theta(1), mainP.P.Tx.Theta(end), mainP.interp_upsample);
+    end
+    radius = data_DA.Radius;
+    if mainP.interp_upsample > 0
+        radius = linspace(radius(1), radius(end), mainP.interp_upsample);
+    end
     warning('off')
-    [scanConvertedImage, Xs, Zs] = getScanConvertedImage(m_BF, ...
-        thetaRange, data_DA.Radius, 2024, 2024, 'spline');
+    [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
+        thetas, 1e3 * radius, 2024, 2024, 'spline');
     warning('on')
-    img = db(abs(scanConvertedImage));
 
     clf(); subplot(1,2,1)
     imagesc(Xs.*1000, Zs.*1000, img)
@@ -64,18 +72,16 @@ for m=1:length(mainP.methods_set)
         int2str(mainP.num_beams)])
 
     subplot(1,2,2); hold on
-    bf_img = db(abs(m_BF));
-    thetaRange = rad2deg(thetaRange);
-%     thetaRange = sind(thetaRange) * 40; % TEST. mm
+    thetaRange = rad2deg(thetas);
     pl_legend = {};
     y_min = Inf; y_max = -Inf; x_min = Inf; x_max = -Inf;
     for p=1:length(mainP.pts_range)
         p_range = mainP.pts_range(p); % range not constant if LateralShift
-        minr = find(data_DA.Radius >= (p_range - 2)*1e-3, 1);
-        maxr = find(data_DA.Radius >= (p_range + 2)*1e-3, 1);
-        p_bp = max(bf_img(minr:maxr, :), [], 1);
+        minr = find(radius >= (p_range - 2)*1e-3, 1);
+        maxr = find(radius >= (p_range + 2)*1e-3, 1);
+        p_bp = max(img(minr:maxr, :), [], 1);
         if p == 1 || abs(p_range - mainP.pts_range(1)) > 0.5
-            plot(thetaRange, p_bp, colors_list{p}, 'LineWidth', 2, ...
+            plot(thetas, p_bp, colors_list{p}, 'LineWidth', 2, ...
                 'LineStyle', linestyle_list{p}, 'Marker', markers_list{p});
             p_title = strcat('P', int2str(p), '-', ...
                 int2str(data_phantom.positions(p,3)*1000), 'mm range');
@@ -136,16 +142,18 @@ for m=1:length(mainP.methods_set)
         m_P = mainP.copyP(mainP.upsample_number);
     end
 
-    thetaRange = m_P.Tx.Theta;
-    if strcmp(mainP.methods_set(m),'IAA-MBMB-Upsampled')
-        thetaRange = linspace(m_P.Tx.Theta(1), m_P.Tx.Theta(end), ...
-            mainP.upsample_number);
+    thetas = m_P.Tx.Theta;
+    if mainP.interp_upsample > 0
+        thetas = linspace(mainP.P.Tx.Theta(1), mainP.P.Tx.Theta(end), mainP.interp_upsample);
+    end
+    radius = data_DA.Radius;
+    if mainP.interp_upsample > 0
+        radius = linspace(radius(1), radius(end), mainP.interp_upsample);
     end
     warning('off')
-    [scanConvertedImage, Xs, Zs] = getScanConvertedImage(m_BF, ...
-        thetaRange, 1e3 * data_DA.Radius, 2024, 2024, 'spline');
+    [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
+        thetas, 1e3 * radius, 2024, 2024, 'spline');
     warning('on')
-    img = db(abs(scanConvertedImage));
 
     if mainP.shift_per_beam
         b_shift = Shift(mainP.shift.type, mainP.shift.val, ...
@@ -163,7 +171,7 @@ for m=1:length(mainP.methods_set)
             s_phantom = b_shift.shiftPositions(data_phantom, shifts(s));
             p_size = 0.05; %mm
             
-            beam_az = atan(m_P.Tx.Theta(s)) * s_phantom.positions(p, 3)*1e3;
+            beam_az = atan(thetas(s)) * s_phantom.positions(p, 3)*1e3;
             pos_az = s_phantom.positions(p, 1)*1e3;
             pos_r = s_phantom.positions(p, 3)*1e3;
             s_az = find(abs(Xs - pos_az) < p_size, 10); % beam azimuth

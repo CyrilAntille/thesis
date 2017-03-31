@@ -30,7 +30,7 @@ function P = Parameters(NTheta)
   % Field II parametres
   P.fs    =  90e6;   % Sampling frequency user by FieldII [Hz]
   P.DesFactor = 4;    % Decimation factor
-%  P.DesFactor = 1    % Decimation factor
+%   P.DesFactor = 1;    % Decimation factor
   
   %%
   % Parameters defining Tx and Rx

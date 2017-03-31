@@ -3,7 +3,9 @@ classdef MainParameters
     
     properties
         % Array and medium parameters
-        P = Parameters();
+        num_beams = 61;
+        P = Parameters(61); % Argument must match num_beams
+        % Note: If num_beams changed. must call copyP()
         medium_range = [35, 60] % mm
         % medium_range should start P.MinRadImage (35mm)
         
@@ -26,8 +28,7 @@ classdef MainParameters
         pts_azimuth = [0]; % If non-zero, no guaranty that at least
         % on beam hits the point perfectly (-> risk of scalloping loss!)
         pts_gain = 30; % dB over background average
-        shift = Shift(ShiftType.RadialVar, 1/2, 3, 0); % Ref Shift.m
-        num_beams = 101;
+        shift = Shift(ShiftType.RadialVar, 1/2, 1, 0); % Ref Shift.m
         shift_per_beam = false;
         % If true, the scatterer points are shifted after each beam.
         % This results in a single image per num_beam value.
@@ -47,7 +48,12 @@ classdef MainParameters
         nsd = 30; % Number of subdimensions. All but DAS and MV.
         upsample_number = 500; % Number of received beams for interpolation
         % by phase shifting. Only IAA MB/MB Upsampled.
-        normalize_bfim = true;
+        
+        interp_upsample = 0; % 0 = Disabled
+        interp_method = 'spline';
+        normalize_bfim = false;
+        norm_variant = 1; % 1 = Standalone normalization, 2 = DAS-Based normalization,
+        % 3 = First-shift based normalization (only if shift_per_beam = false)
         
         save_all_data = false; % Can take multiple GB of memory
         save_plots = false; % If false, will display them instead

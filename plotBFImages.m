@@ -6,34 +6,34 @@ if mainP.save_plots
 else
     figure;
 end
-
+thetas = mainP.P.Tx.Theta;
+if mainP.interp_upsample > 0
+    thetas = linspace(mainP.P.Tx.Theta(1), mainP.P.Tx.Theta(end), mainP.interp_upsample);
+end
 for m=1:length(mainP.methods_set)
     m_BF = data_BF{m};
-
-    thetaRange = mainP.P.Tx.Theta;
-    if strcmp(mainP.methods_set(m),'IAA-MBMB-Upsampled')
-        thetaRange = linspace(m_P.Tx.Theta(1), m_P.Tx.Theta(end), ...
-            mainP.upsample_number);
-    end
-    
     for s=1:mainP.shift.num_shifts
         if mainP.shift_per_beam
-            s_DA = data_DA;
             s_BF = m_BF;
+            radius = data_DA.Radius;
         else
-            s_DA = data_DA{s};
             s_BF = m_BF{s};
+            radius = data_DA{s}.Radius;
+        end
+        if mainP.interp_upsample > 0
+            radius = linspace(radius(1), radius(end), mainP.interp_upsample);
         end
         warning('off')
         [scanConvertedImage, Xs, Zs] = getScanConvertedImage(s_BF, ...
-            thetaRange, 1e3 * s_DA.Radius, 2024, 2024, 'spline');
+            thetas, 1e3 * radius, 2024, 2024, 'spline');
         warning('on')
         img = db(abs(scanConvertedImage));
+        
         clf(); imagesc(Xs, Zs, img)
         xlabel('azimuth [mm]');
     %             xlim([-15 15])
     %             ylim([35 45])
-        if mainP.normalize_bfim
+        if mainP.normalize_bfim && (mainP.speckle_create || mainP.speckle_load)
             caxis([-25  25]);
         end
         colorbar

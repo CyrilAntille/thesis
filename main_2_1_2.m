@@ -1,14 +1,15 @@
 %% 2.1: Motion between frames - max scalloping loss vs range
 clear all
 mainP = MainParameters();
-mainP.num_beams = 101;
+mainP.num_beams = 61;
 mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
-mainP.save_plots = true;
-mainP.speckle_load = false;
+mainP.save_plots = false;
+mainP.speckle_load = true;
 mainP.save_all_data = false;
 mainP.normalize_bfim = false;
+mainP.interp_upsample = 0;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
         mainP.shift.type == ShiftType.RadialCst
@@ -21,27 +22,26 @@ mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %% Max scalloping loss
-pts_range = 36:2:58;
+% pts_range = 35:5:55;
+pts_range = 40;
 mainP.pts_azimuth = [0];
 
 max_loss = zeros(length(pts_range), length(mainP.methods_set));
 for p=1:length(pts_range)
     mainP.pts_range = [pts_range(p)];
     fprintf('Main_2_1_2: Point range: %d.\n', mainP.pts_range(1));
-    mainP.files_prefix = strcat(mainP.pts_range(1), 'mm_');
+    mainP.files_prefix = strcat(int2str(mainP.pts_range(1)), 'mm_');
     main_init
     for m=1:length(mainP.methods_set)
-%         max_loss(p, m) = data_peaks{1}{m}{1}.peak(2) ...
-%             - data_peaks{2}{m}{1}.peak(2);
         min_gain = Inf; max_gain = -Inf;
         for s=1:mainP.shift.num_shifts
-            sgain = data_peaks{s}{m}{1}.peak(2);
+            sgain = data_peaks{m}{s}{1}.peak(2);
             min_gain = min([min_gain sgain]);
             max_gain = max([max_gain sgain]);
         end
         max_loss(p, m) = max_gain - min_gain;
     end
-%     plotBFImages(mainP, data_DA, data_BF)
+    plotBFImages(mainP, data_DA, data_BF)
     clearvars -except mainP pts_range max_loss
 end
 mainP.files_prefix = '';

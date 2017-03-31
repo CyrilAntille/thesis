@@ -4,13 +4,15 @@ mainP = MainParameters();
 mainP.pts_range = [40];
 mainP.pts_azimuth = [0];
 mainP.num_beams = 61;
-mainP.shift = Shift(ShiftType.RadialVar, 1/8, 17, 0, 1); % Ref Shift.m
+mainP.shift = Shift(ShiftType.RadialVar, 1/4, 9, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
 mainP.save_plots = true;
-mainP.speckle_load = false;
+mainP.speckle_load = true;
 mainP.save_all_data = false;
-mainP.normalize_bfim = false;
+mainP.normalize_bfim = true;
+mainP.norm_variant = 2;
+mainP.interp_upsample = 2024;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
         mainP.shift.type == ShiftType.RadialCst
