@@ -55,15 +55,17 @@ for m=1:length(mainP.methods_set)
         radius = linspace(radius(1), radius(end), mainP.interp_upsample);
     end
     warning('off')
-    [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
+    [scanConvertedImage, Xs, Zs] = getScanConvertedImage(m_BF, ...
         thetas, 1e3 * radius, 2024, 2024, 'spline');
     warning('on')
+    img = db(abs(scanConvertedImage));
 
     clf(); subplot(1,2,1)
-    imagesc(Xs.*1000, Zs.*1000, img)
-    caxis([-25  25]);
-%     xlim([-20 20])
-    ylim([min(mainP.pts_range)-5 max(mainP.pts_range)+5])
+    imagesc(Xs, Zs, img)
+    if mainP.normalize_bfim && (mainP.speckle_create || mainP.speckle_load)
+        caxis([-25  25]);
+    end
+    ylim([min(mainP.pts_range)-3 max(mainP.pts_range)+3])
     colorbar
     colormap(gray)
     xlabel('azimuth [mm]');
@@ -72,6 +74,7 @@ for m=1:length(mainP.methods_set)
         int2str(mainP.num_beams)])
 
     subplot(1,2,2); hold on
+    img = db(abs(m_BF));
     thetaRange = rad2deg(thetas);
     pl_legend = {};
     y_min = Inf; y_max = -Inf; x_min = Inf; x_max = -Inf;

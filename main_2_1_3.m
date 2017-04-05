@@ -3,8 +3,8 @@ clear all
 % clearvars -except mainP
 if ~exist('mainP', 'var')
     mainP = MainParameters();
-    mainP.pts_range = [40, 50];
-    mainP.pts_azimuth = [0, 0];
+    mainP.pts_range = [40];
+    mainP.pts_azimuth = [0];
     mainP.num_beams = 61;
     mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
     mainP.shift_per_beam = false;
@@ -13,6 +13,8 @@ if ~exist('mainP', 'var')
     mainP.speckle_load = false;
     mainP.save_all_data = false;
     mainP.normalize_bfim = false;
+    mainP.norm_variant = 1;
+    mainP.interp_upsample = 8052;
 
     if mainP.shift.type == ShiftType.RadialVar || ...
             mainP.shift.type == ShiftType.RadialCst
@@ -26,7 +28,7 @@ mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %% Max loss vs beams
-num_beams = 251:10:331;
+num_beams = 11:10:401;
 pts_gain = zeros(length(mainP.pts_range), length(mainP.methods_set), ...
     length(num_beams), mainP.shift.num_shifts);
 for b=1:length(num_beams)
@@ -37,7 +39,7 @@ for b=1:length(num_beams)
     for s=1:mainP.shift.num_shifts
         for m=1:length(mainP.methods_set)
             for p=1:length(mainP.pts_range)
-                pts_gain(p, m, b, s) = data_peaks{s}{m}{p}.peak(2);
+                pts_gain(p, m, b, s) = data_peaks{m}{s}{p}.peak(2);
             end
         end
     end

@@ -7,12 +7,12 @@ mainP.num_beams = 61;
 mainP.shift = Shift(ShiftType.RadialVar, 1/4, 9, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
-mainP.save_plots = true;
-mainP.speckle_load = true;
+mainP.save_plots = false;
+mainP.speckle_load = false;
 mainP.save_all_data = false;
 mainP.normalize_bfim = true;
 mainP.norm_variant = 2;
-mainP.interp_upsample = 2024;
+mainP.interp_upsample = 4026;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
         mainP.shift.type == ShiftType.RadialCst
@@ -31,7 +31,7 @@ main_init
 for s=1:mainP.shift.num_shifts
     for m=1:length(mainP.methods_set)
         for p=1:length(mainP.pts_range)
-            pts_gain(p, m, s) = data_peaks{s}{m}{p}.peak(2);
+            pts_gain(p, m, s) = data_peaks{m}{s}{p}.peak(2);
         end
     end
 end

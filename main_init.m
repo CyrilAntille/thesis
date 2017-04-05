@@ -152,12 +152,12 @@ end
 %%
 if true
     fprintf('Images upsampling and normalization\n')
+    data_peaks = cell([1, length(mainP.methods_set)]);
     % mainP.norm_variant: 1 = Standalone normalization, 2 = DAS-Based normalization,
     % 3 = First-shift based normalization (only if shift_per_beam = false)
     if mainP.shift_per_beam
         norm_info = [max(data_BF{1}(:)), 0, mainP.normalize_bfim];
         % norm_info = [orig_max, norm_factor, do_normalization]
-        data_peaks = cell([1, mainP.num_beams]);
         for m=1:length(mainP.methods_set)
             if mainP.norm_variant == 2 && m > 1
                 mainP.normalize_bfim = false;
@@ -169,7 +169,6 @@ if true
                 end
                 mainP.normalize_bfim = norm_info(3);
             else
-                fprintf('whaaat - ')
                 m_BF = normalizeBFImage(mainP, data_BF{m}, ...
                     data_DA.Radius, data_phantom);
                 norm_info(2) = max(m_BF(:)) / norm_info(1);
@@ -182,8 +181,8 @@ if true
     else
         norm_info = [max(data_BF{1}{1}(:)), 0, mainP.normalize_bfim];
         % norm_info = [orig_max, norm_factor, do_normalization]
-        data_peaks = cell([1, mainP.shift.num_shifts]);
         for m=1:length(mainP.methods_set)
+            data_peaks{m} = cell([1, mainP.shift.num_shifts]);
             if mainP.norm_variant == 3
                 norm_info(1) = max(data_BF{m}{1}(:));
             end
