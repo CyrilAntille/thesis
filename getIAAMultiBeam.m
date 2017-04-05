@@ -6,7 +6,7 @@
 % dataCube     : A range x beams x array-elements image cube
 % indsI        : Indices of ranges that are to be processed; indsI==0 means all ranges
 % regCoef      : Regularization coefficient for diagonal loading
-% V            : The columns span an orthogonal subspace; if V is empty ([]) than the full space is used (no subspacing)
+% V            : The columns span an orthogonal subspace; if V is empty ([]) then the optimal subspace is estimated from eigenvalue decomposition
 % beamThetas     : The angles for the actual beams
 % scanGridThetas : The scanning grid in angles (could sample much denser than that of physical beams)
 % pitchInLambdas : Distance between array elements in center wavelengths
@@ -25,21 +25,18 @@
 % 2011.01.21 - Are C. Jensen {Fixed bug when ~useMultibeamPowerEstimate, and introduced simple error-check for scanGridThetas values  when needs to interpolate.}
 % 2011.06.23 - Are C. Jensen {Renamed parameters signalling the use of 'sbp' and 'mpb' instead of the misleading power and amplitude terms, and introduced the useSlowForLoop parameter}
 % 2011.11.25 - Are C. Jensen {Switched to beamThetas and scanGridThetas in angles, and added the "pitchInLambdas" parameter }
-function [imSbp imMbp] = getIAAMultiBeam(dataCube, indsI, regCoef, V, beamThetas, scanGridThetas, pitchInLambdas, useMBCovInIterations, nIterations, doCalcSbp, verbose, useSlowForLoop)
+% 2017.04.05 - Cyril Antille {If V is emtpy, the optimal subspace value is estimated from eigenvalue decomposition}
+function [imSbp, imMbp] = getIAAMultiBeam(dataCube, indsI, regCoef, V, beamThetas, scanGridThetas, pitchInLambdas, useMBCovInIterations, nIterations, doCalcSbp, verbose, useSlowForLoop)
 
 if nargin<12
   useSlowForLoop = false;
 end
 
-[N M K] = size(dataCube);
+[N, M, K] = size(dataCube);
 
-if indsI<=0, indsI = 1:N;, end;
-if isempty(V), V = eye(K);, end;
+if indsI<=0, indsI = 1:N; end;
 nBeams = M;
-nSubDims = length(V(1,:));
-I = eye(nSubDims);
 doInterpolate = length(scanGridThetas)~=length(beamThetas) || sum(abs(scanGridThetas-beamThetas))>1e-10;
-indsOneToNSubdims = (1:nSubDims)';
 
 if doCalcSbp && doInterpolate
   if min(scanGridThetas)<min(beamThetas) || max(scanGridThetas)>max(beamThetas)
@@ -55,6 +52,23 @@ n = (0:K-1)';
 for m=1:nSources
   A(:,m) = exp( complex(0,1)*scanGridPsis(m)*n );
 end
+
+if isempty(V)
+    %V = eye(K); % Fullspace span
+    eigenvals = svd(A);
+    eigenthld = (max(eigenvals) - min(eigenvals)) / 2;
+    nSubDims = find(eigenvals <= eigenthld, 1);
+    if isempty(nSubDims)
+        nSubDims = K;
+    end
+    fprintf('IAAMultiBeam nSubDims from eigenvalues: %d\n', nSubDims)
+    %V = diag(eigenvals(1:nSubDims));
+    V = getSimpleBeamspace(K, nSubDims);
+else
+    nSubDims = length(V(1,:));
+end
+I = eye(nSubDims);
+indsOneToNSubdims = (1:nSubDims)';
 A = V'*A;
 
 % Build the steering matrix, Ab, in which each column represents one "physical" beam direction
@@ -136,8 +150,8 @@ for i=indsI
 
   if verbose
     percent = round( 100*(i-min(indsI))/(max(indsI)-min(indsI)) );
-    if mod(i,5)==0, fprintf(' %d%%', percent);, end;
-    if mod(i,100)==0, fprintf('\n');, end;
+    if mod(i,5)==0, fprintf(' %d%%', percent); end;
+    if mod(i,100)==0, fprintf('\n'); end;
   end
 end
 
