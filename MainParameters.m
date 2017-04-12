@@ -43,6 +43,7 @@ classdef MainParameters
         dl = 5/100; % Diagonal loading. MV only.
         sbl = 1/2; % Subarray length ratio (-> 1/2 = L/2). MV only.
         dofb = true; % Do forward-backward averaging. MV only.
+        tavg = 2; % Number of samples used for temporal averaging
         % nsd = ceil(rad2deg(P.Tx.Theta(end))); % Number of subdimensions.
         % All but DAS and MV.
         nsd = 0; % Number of subdimensions for IAA subspace span

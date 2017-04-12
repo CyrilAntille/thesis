@@ -28,14 +28,14 @@ mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %% Max loss vs beams
-% num_beams = 611:50:1011;
-num_beams = [0, 61, 200, 600, 1000, 2000]; % Test with varying upsample
+num_beams = 11:10:71;
+% num_beams = [0, 61, 200, 600, 1000, 2000]; % Test with varying upsample
 % mainP.interp_method = 'cubic'; % nearest, linear, cubic, spline
 pts_gain = zeros(length(mainP.pts_range), length(mainP.methods_set), ...
     length(num_beams), mainP.shift.num_shifts);
 for b=1:length(num_beams)
-%     mainP.num_beams = num_beams(b);
-    mainP.interp_upsample = num_beams(b); % Test with varying upsample
+    mainP.num_beams = num_beams(b);
+%     mainP.interp_upsample = num_beams(b); % Test with varying upsample
     fprintf('Main_2_1_3: Beams number: %d\n', num_beams(b));
     mainP.P = mainP.copyP(mainP.num_beams);
     main_init

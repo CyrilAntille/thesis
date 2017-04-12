@@ -39,7 +39,7 @@ end
 %     clearvars -except mainP num_beams pts_gain
 %%
 for m=1:length(mainP.methods_set)
-    maxbf = max(data_BF{m}{9}(:));
+    maxbf = max(data_BF{1}{1}(:));
     for s=1:mainP.shift.num_shifts
         data_BF{m}{s} = data_BF{m}{s} ./ maxbf;
     end

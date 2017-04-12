@@ -11,7 +11,7 @@ if strcmp(bf_method, 'DAS')
 elseif strcmp(bf_method, 'MV')
     warning('off');
     sbl = mainP.sbl * mainP.P.Rx.no_elements;
-    bf_im = getCapon(dataCube,0,0,mainP.dl,sbl,2,5,mainP.dofb,verbose);
+    bf_im = getCapon(dataCube,0,0,mainP.dl,sbl,mainP.tavg,[],mainP.dofb,verbose);
     bf_im = abs(bf_im);
     warning('on');
 elseif strcmp(bf_method, 'MV-MB')
@@ -25,7 +25,7 @@ elseif strfind(bf_method, 'MV')
         sbl = mainP.P.Rx.no_elements - 1;
     end
     warning('off');
-    bf_im = getCapon(dataCube,0,0,mainP.dl,sbl,2,5,mainP.dofb,verbose);
+    bf_im = getCapon(dataCube,0,0,mainP.dl,sbl,mainP.tavg,[],mainP.dofb,verbose);
     bf_im = abs(bf_im);
     warning('on');
 elseif strcmp(bf_method, 'IAA-MBSB')

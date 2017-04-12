@@ -64,7 +64,7 @@ for pidx=1:length(pl)
 end
 grid on;
 legend(mainP.methods_set, 'Location', 'best');
-ylabel('Max scalloping loss [dB]');
+ylabel('Max scalloping loss difference [dB]');
 xlabel('Scatterer point radius [mm]');
 if mainP.save_plots
     prefix = mainP.files_prefix;
