@@ -4,15 +4,15 @@ mainP = MainParameters();
 mainP.pts_range = [40];
 mainP.pts_azimuth = [0];
 mainP.num_beams = 61;
-mainP.shift = Shift(ShiftType.RadialVar, 1/4, 9, 0, 1); % Ref Shift.m
+mainP.shift = Shift(ShiftType.RadialVar, 1/8, 17, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
-mainP.save_plots = false;
+mainP.save_plots = true;
 mainP.speckle_load = false;
 mainP.save_all_data = false;
-mainP.normalize_bfim = true;
-mainP.norm_variant = 2;
-mainP.interp_upsample = 4026;
+mainP.normalize_bfim = false;
+mainP.norm_variant = 1;
+mainP.interp_upsample = 0;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
         mainP.shift.type == ShiftType.RadialCst
@@ -38,34 +38,33 @@ end
 % plotBFImages(mainP, data_DA, data_BF)
 %     clearvars -except mainP num_beams pts_gain
 %%
-% for m=1:length(mainP.methods_set)
-%     maxbf = max(data_BF{m}{9}(:));
-%     for s=1:mainP.shift.num_shifts
-%         data_BF{m}{s} = data_BF{m}{s} ./ maxbf;
-%     end
-% end
-% 
-% data_peaks = cell([1, mainP.shift.num_shifts]);
-% for s=1:mainP.shift.num_shifts
-%     s_BF = cell([1 length(mainP.methods_set)]);
-%     for m=1:length(mainP.methods_set)
-%         s_BF{m} = data_BF{m}{s};
-%     end
-%     data_peaks{s} = computePeaksInfo(mainP, ...
-%         data_phantom{s}, data_DA{s}, s_BF);
-% end
-% 
-% for s=1:mainP.shift.num_shifts
-%     for m=1:length(mainP.methods_set)
-%         for p=1:length(mainP.pts_range)
-%             max_gain = -Inf;
-%             for s2=1:mainP.shift.num_shifts
-%                 max_gain = max([max_gain data_peaks{s2}{m}{p}.peak(2)]);
-%             end
-%             pts_gain(p, m, s) = data_peaks{s}{m}{p}.peak(2) - max_gain;
-%         end
-%     end
-% end
+for m=1:length(mainP.methods_set)
+    maxbf = max(data_BF{m}{9}(:));
+    for s=1:mainP.shift.num_shifts
+        data_BF{m}{s} = data_BF{m}{s} ./ maxbf;
+    end
+end
+
+data_peaks = cell([1, length(mainP.methods_set)]);
+for m=1:length(mainP.methods_set)
+    data_peaks{m} = cell([1, mainP.shift.num_shifts]);
+    for s=1:mainP.shift.num_shifts
+        data_peaks {m}{s} = computePeaksInfo(mainP, ...
+            data_phantom{s}, data_DA{s}.Radius, data_BF{m}{s});
+    end
+end
+
+for m=1:length(mainP.methods_set)
+    for s=1:mainP.shift.num_shifts
+        for p=1:length(mainP.pts_range)
+            max_gain = -Inf;
+            for s2=1:mainP.shift.num_shifts
+                max_gain = max([max_gain data_peaks{m}{s2}{p}.peak(2)]);
+            end
+            pts_gain(p, m, s) = data_peaks{m}{s}{p}.peak(2) - max_gain;
+        end
+    end
+end
 
 %% Plot
 linestyle_list = {'-.','--','-',':'};
@@ -111,6 +110,8 @@ for p=1:length(mainP.pts_range)
         saveas(gcf, mainP.outputFileName('png'), 'png')
         saveas(gcf, mainP.outputFileName('fig'), 'fig')
         mainP.files_prefix = prefix;
+        save(strcat(mainP.save_folder, mainP.files_prefix, ...
+            'results_2_1_1.mat'), 'pts_gain', '-v7.3')
     else
         pause
     end

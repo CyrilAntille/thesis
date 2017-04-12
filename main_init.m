@@ -3,6 +3,8 @@ addpath ../Field_II_ver_3_24/ -end
 
 if ~exist('mainP', 'var')
     mainP = MainParameters();
+%     mainP.speckle_create = true;
+%     mainP.speckle_seed = 42;
 end
 
 %% 1. FieldII initialization and Speckle raw data creation
@@ -40,7 +42,7 @@ end
 % speckle_raw_image is created to avoid copying the whole speckle_raw
 % structure when running parallel loops.
 
-fprintf('Initializing Field II for all workers.\n')
+fprintf('Initializing Field II for all workers\n')
 if mainP.disable_multiprocess
     pool = struct; pool.NumWorkers = 1;
 else

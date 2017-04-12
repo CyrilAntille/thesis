@@ -6,7 +6,8 @@ if mainP.interp_upsample > 0
     warning('off')
     [thetaGrid, rangeGrid] = meshgrid(mainP.P.Tx.Theta, radius);
     thetas = linspace(mainP.P.Tx.Theta(1), mainP.P.Tx.Theta(end), mainP.interp_upsample);
-    radius = linspace(radius(1), radius(end), mainP.interp_upsample);
+%     radius = linspace(radius(1), radius(end), mainP.interp_upsample);
+    % Comment out above line to upsample range dimension as well
     [upthetaGrid, uprangeGrid] = meshgrid(thetas, radius);
     bf_im = interp2(thetaGrid, rangeGrid, bf_im, ...
         upthetaGrid, uprangeGrid, mainP.interp_method, 0);

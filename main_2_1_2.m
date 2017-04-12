@@ -1,14 +1,15 @@
 %% 2.1: Motion between frames - max scalloping loss vs range
 clear all
 mainP = MainParameters();
-mainP.num_beams = 61;
-mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
+mainP.num_beams = 35;
+mainP.shift = Shift(ShiftType.RadialVar, 1/2, 4, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
-mainP.save_plots = false;
-mainP.speckle_load = true;
+mainP.save_plots = true;
+mainP.speckle_load = false;
 mainP.save_all_data = false;
 mainP.normalize_bfim = false;
+mainP.norm_variant = 1;
 mainP.interp_upsample = 0;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
@@ -17,19 +18,18 @@ if mainP.shift.type == ShiftType.RadialVar || ...
     % This step transforms radiuses to ranges.
     mainP.pts_range = mainP.pts_range.*...
         cos(sin(mainP.pts_azimuth./mainP.pts_range));
-end
+end 
 mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %% Max scalloping loss
-% pts_range = 35:5:55;
-pts_range = 40;
+pts_range = 36:2:58;
 mainP.pts_azimuth = [0];
 
 max_loss = zeros(length(pts_range), length(mainP.methods_set));
 for p=1:length(pts_range)
     mainP.pts_range = [pts_range(p)];
-    fprintf('Main_2_1_2: Point range: %d.\n', mainP.pts_range(1));
+    fprintf('Main_2_1_2: Point range: %d\n', mainP.pts_range(1));
     mainP.files_prefix = strcat(int2str(mainP.pts_range(1)), 'mm_');
     main_init
     for m=1:length(mainP.methods_set)
@@ -41,7 +41,7 @@ for p=1:length(pts_range)
         end
         max_loss(p, m) = max_gain - min_gain;
     end
-    plotBFImages(mainP, data_DA, data_BF)
+%     plotBFImages(mainP, data_DA, data_BF)
     clearvars -except mainP pts_range max_loss
 end
 mainP.files_prefix = '';
@@ -72,6 +72,8 @@ if mainP.save_plots
     saveas(gcf, mainP.outputFileName('png'), 'png')
     saveas(gcf, mainP.outputFileName('fig'), 'fig')
     mainP.files_prefix = prefix;
+    save(strcat(mainP.save_folder, mainP.files_prefix, ...
+        'results_2_1_2.mat'), 'pts_range', 'max_loss', '-v7.3')
 else
     pause;
 end

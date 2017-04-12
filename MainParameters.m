@@ -120,7 +120,7 @@ classdef MainParameters
                         fprintf(fid, ', %s', fval{v});
                     end
                     fprintf(fid, ' \n');
-                elseif isa(fval,'Shift')
+                elseif isa(fval,'Shift') || isa(fval,'struct')
                     fprintf(fid, '%s\n', fname);
                     s_fields = fieldnames(fval);
                     for s=1:length(s_fields)
@@ -128,11 +128,15 @@ classdef MainParameters
                         sval = fval.(sname);
                         if isa(sval,'numeric')|| isa(sval,'logical')
                             sval = num2str(sval);
-                        else
+                        elseif isa(sval,'char')
                             sval = char(sval);
+                        else
+                            continue % complex fields not displayed
                         end
                         fprintf(fid, '\t%s\t\t%s\n', sname, sval);
                     end
+                else
+                    fprintf(fid, '%s\t\t%s\n', fname, fval);
                 end
             end
             fprintf(fid, '==============================\n');

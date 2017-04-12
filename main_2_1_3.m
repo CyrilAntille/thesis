@@ -1,5 +1,5 @@
 %% 2.1: Motion between frames
-clear all
+% clear all
 % clearvars -except mainP
 if ~exist('mainP', 'var')
     mainP = MainParameters();
@@ -14,7 +14,7 @@ if ~exist('mainP', 'var')
     mainP.save_all_data = false;
     mainP.normalize_bfim = false;
     mainP.norm_variant = 1;
-    mainP.interp_upsample = 8052;
+    mainP.interp_upsample = 0;
 
     if mainP.shift.type == ShiftType.RadialVar || ...
             mainP.shift.type == ShiftType.RadialCst
@@ -28,12 +28,15 @@ mainP.P = mainP.copyP(mainP.num_beams);
 mainP = mainP.createOutputDir();
 
 %% Max loss vs beams
-num_beams = 11:10:401;
+% num_beams = 611:50:1011;
+num_beams = [0, 61, 200, 600, 1000, 2000]; % Test with varying upsample
+% mainP.interp_method = 'cubic'; % nearest, linear, cubic, spline
 pts_gain = zeros(length(mainP.pts_range), length(mainP.methods_set), ...
     length(num_beams), mainP.shift.num_shifts);
 for b=1:length(num_beams)
-    mainP.num_beams = num_beams(b);
-    fprintf('Main_2_1_3: Beams number: %d.\n', mainP.num_beams);
+%     mainP.num_beams = num_beams(b);
+    mainP.interp_upsample = num_beams(b); % Test with varying upsample
+    fprintf('Main_2_1_3: Beams number: %d\n', num_beams(b));
     mainP.P = mainP.copyP(mainP.num_beams);
     main_init
     for s=1:mainP.shift.num_shifts
@@ -90,6 +93,8 @@ for p=1:length(mainP.pts_range)
             int2str(mainP.pts_range(p)), '_');
         saveas(gcf, mainP.outputFileName('png'), 'png')
         saveas(gcf, mainP.outputFileName('fig'), 'fig')
+        save(strcat(mainP.save_folder, mainP.files_prefix, ...
+            'results_2_1_3.mat'), 'num_beams', 'pts_gain', '-v7.3')
     else
         pause
     end
