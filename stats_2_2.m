@@ -3,11 +3,12 @@ clear all
 mainP = MainParameters();
 mainP.pts_range = [40]; % Add a range (in mm) for each point
 mainP.pts_azimuth = [0]; % Add a range (in mm) for each point
-mainP.num_beams = 3*71; % can be a single value or list of values
-mainP.shift = Shift(ShiftType.RadialVar, 0,  mainP.num_beams, 0, 3);
-% mainP.shift = Shift(ShiftType.LinearSpeed, 0,  mainP.num_beams, 0, 3);
+mainP.num_beams = 65; % can be a single value or list of values
+% mainP.shift = Shift(ShiftType.RadialVar, 0,  mainP.num_beams, 0, 1);
+mainP.shift = Shift(ShiftType.LinearSpeed, 0,  mainP.num_beams, 0, 1);
 mainP.shift_per_beam = true;
-mainP.speckle_load = false;
+mainP.speckle_load = true;
+% mainP.interp_upsample = 1300;
 
 if (mainP.shift.type == ShiftType.RadialVar || ...
         mainP.shift.type == ShiftType.RadialCst)
@@ -61,10 +62,49 @@ for p=1:size(pts_3dB_width, 1)
     legend(mainP.methods_set, 'Location', 'best')
     title('Beampattern mainlobes 3dB width')
     x_unit = ShiftType.getShiftTypeUnit(mainP.shift.type);
-    xlabel(strcat('Speed [', x_unit, ']'))
+    xlabel(strcat('Velocity [', x_unit, ']'))
     ylabel('Mainlobe 3dB width [degrees]')
     if mainP.save_plots
         mainP.files_prefix = strcat('speeds_p', int2str(p), '_');
+        saveas(gcf, mainP.outputFileName('png'), 'png')
+        saveas(gcf, mainP.outputFileName('fig'), 'fig')
+        save(strcat(mainP.save_folder, mainP.files_prefix, ...
+            'results_stats_2_2.mat'), 'speeds', 'pts_3dB_width', '-v7.3')
+        mainP.files_prefix = '';
+    else
+        pause
+    end
+end
+close
+
+%%
+if mainP.save_plots
+    figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+else
+    figure;
+end
+zero_idx = find(speeds == 0, 1);
+if isempty(zero_idx)
+    zero_idx = 1;
+end
+for p=1:size(pts_3dB_width, 1)
+    pwidths = squeeze(pts_3dB_width(p,:,:))';
+    for w=1:size(pwidths,2)
+        pwidths(:,w) = pwidths(:,w) / pwidths(zero_idx,w);
+    end
+    pwidths = pwidths * 100 - 100;
+    p1 = plot(speeds, pwidths, 'LineWidth', 2);
+    for pidx=1:length(p1)
+        p1(pidx).Marker = markers_list{pidx};
+        p1(pidx).LineStyle = linestyle_list{pidx};
+    end
+    legend(mainP.methods_set, 'Location', 'best')
+    title('Beampattern mainlobes 3dB relative width')
+    x_unit = ShiftType.getShiftTypeUnit(mainP.shift.type);
+    xlabel(strcat('Velocity [', x_unit, ']'))
+    ylabel('Mainlobe 3dB width increase [%]')
+    if mainP.save_plots
+        mainP.files_prefix = strcat('speeds_p', int2str(p), '_relative_');
         saveas(gcf, mainP.outputFileName('png'), 'png')
         saveas(gcf, mainP.outputFileName('fig'), 'fig')
         mainP.files_prefix = '';

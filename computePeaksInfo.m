@@ -14,7 +14,7 @@ thetas = linspace(mainP.P.Tx.Theta(1), mainP.P.Tx.Theta(end), size(bf_im, 2));
 for p=1:length(mainP.pts_range)
     scat_p = struct;
     scat_p.p_trajectory = zeros([3 length(shifts)]); % [x, z, ampl]
-    scat_p.beam_trajectory = zeros([3 length(shifts)]); % [angle, data_DA.Radius, ampl]
+    scat_p.beam_trajectory = zeros([3 length(shifts)]); % [angle, radius, ampl]
     % Scatterer point and beam trajectories
     if mainP.shift_per_beam
         for s=1:length(shifts)
@@ -33,7 +33,8 @@ for p=1:length(mainP.pts_range)
             end
             if ~isempty(s_radius_idx)
                 bf_ampl = max(bf_im(s_radius_idx:s_radius_end, s));
-                scat_p.beam_trajectory(:,s) = [s_az; s_radius; bf_ampl];
+%                 scat_p.beam_trajectory(:,s) = [s_az; s_radius; bf_ampl];
+                scat_p.beam_trajectory(:,s) = [thetas(s); s_radius; bf_ampl];
             end
         end
     else
@@ -49,56 +50,55 @@ for p=1:length(mainP.pts_range)
         end
         if ~isempty(s_radius_idx)
             scat_p.beam_trajectory = ones(size(scat_p.beam_trajectory)) .* s_radius;
-            scat_p.beam_trajectory(1,:) = tan(thetas) .* phantom.positions(p, 3);
+%             scat_p.beam_trajectory(1,:) = tan(thetas) .* phantom.positions(p, 3);
+            scat_p.beam_trajectory(1,:) = tan(thetas);
             scat_p.beam_trajectory(3,:) =  ...
                 max(bf_im(s_radius_idx:s_radius_end, :), [], 1);
         end
     end
-    % Expected point azimuth when beam hits it
-    diff_az = abs(scat_p.p_trajectory(1,:) - scat_p.beam_trajectory(1,:));
-    [~, az_idx] = min(diff_az);
-    scat_p.pt_center = scat_p.beam_trajectory(1, az_idx);
-    pts_center(p) = scat_p.pt_center;
+    % Expected point angle when beam hits it
+    p_angle = asin(scat_p.p_trajectory(1,:) ./ scat_p.p_trajectory(2,:));
+    diff_angle = abs(p_angle - scat_p.beam_trajectory(1,:));
+    [~, angle_idx] = min(diff_angle);
+    pts_center(p) = p_angle(angle_idx);
     scatterer_points{p} = scat_p;
 end
 
 for p=1:length(mainP.pts_range)
     scat_p = scatterer_points{p};
     % Finds nearest peak
-    [pdb, paz] = findpeaks(scat_p.beam_trajectory(3,:), ...
-        scat_p.beam_trajectory(1,:));
-    if isempty(paz)
+    [pdb, pangle] = findpeaks(scat_p.beam_trajectory(3,:), scat_p.beam_trajectory(1,:));
+    if isempty(pangle)
         break
     end
-    [~, paz_idx] = min(abs(paz - scat_p.pt_center));
-    [~, pt_idx] = min(abs(pts_center - paz(paz_idx)));
-    if ~mainP.shift_per_beam || (scat_p.pt_center - paz(paz_idx) < 1e-3 && (pt_idx == p))
-        if paz(paz_idx) - scat_p.pt_center < 0 && paz_idx < length(paz)
+    [~, pangle_idx] = min(abs(pangle - pts_center(p)));
+    [~, pt_idx] = min(abs(pts_center - pangle(pangle_idx)));
+    if ~mainP.shift_per_beam || (pts_center(p) - pangle(pangle_idx) < 1e-3 && (pt_idx == p))
+        if pangle(pangle_idx) - pts_center(p) < 0 && pangle_idx < length(pangle)
             % -> compare with next index
-            [~, pt_idx] = min(abs(pts_center - paz(paz_idx+1)));
-            if pdb(paz_idx+1) > pdb(paz_idx) && pt_idx == p && ...
-                    scat_p.pt_center - paz(paz_idx + 1) < 1e-3
-                paz_idx = paz_idx + 1;
+            [~, pt_idx] = min(abs(pts_center - pangle(pangle_idx+1)));
+            if pdb(pangle_idx+1) > pdb(pangle_idx) && pt_idx == p && ...
+                    pts_center(p) - pangle(pangle_idx + 1) < 25*1e-3
+                pangle_idx = pangle_idx + 1; % 25*1e-3 rad = atan(1/40 mm)
             end
-        elseif paz(paz_idx) - scat_p.pt_center >= 0 && paz_idx > 1
+        elseif pangle(pangle_idx) - pts_center(p) >= 0 && pangle_idx > 1
             % -> compare with previous index
-            [~, pt_idx] = min(abs(pts_center - paz(paz_idx-1)));
-            if pdb(paz_idx-1) > pdb(paz_idx) && pt_idx == p && ...
-                   scat_p. pt_center - paz(paz_idx - 1) < 1e-3
-                paz_idx = paz_idx - 1;
+            [~, pt_idx] = min(abs(pts_center - pangle(pangle_idx-1)));
+            if pdb(pangle_idx-1) > pdb(pangle_idx) && pt_idx == p && ...
+                   pts_center(p) - pangle(pangle_idx - 1) < 25*1e-3
+                pangle_idx = pangle_idx - 1;
             end
         end
-        scat_p.peak = [paz(paz_idx); pdb(paz_idx)];
+        scat_p.peak = [pangle(pangle_idx); pdb(pangle_idx)]; % [angle, ampl]
         % Peak 3dB width
-        p_3dbline = ones([1 size(scat_p.beam_trajectory,2)]) ...
-            .* (scat_p.peak(2) - 3);
-        [p_x, ~, ~, ~] = intersections(scat_p.beam_trajectory(1,:), ...
+        p_3dbline = ones([1 size(scat_p.beam_trajectory,2)]).*(scat_p.peak(2) - 3);
+        [p_cross, ~, ~, ~] = intersections(scat_p.beam_trajectory(1,:), ...
             scat_p.beam_trajectory(3,:), scat_p.beam_trajectory(1,:), p_3dbline, 1);
-        if length(p_x) >= 2
-            p_x2 = find(p_x >= scat_p.peak(1), 1);
-            if p_x2 >= 2
-                scat_p.peak_3db = [p_x(p_x2-1); p_x(p_x2); ...
-                    p_x(p_x2) - p_x(p_x2-1)];
+        if length(p_cross) >= 2
+            crossidx = find(p_cross >= scat_p.peak(1), 1);
+            if crossidx >= 2
+                scat_p.peak_3db = [p_cross(crossidx-1); p_cross(crossidx); ...
+                    p_cross(crossidx) - p_cross(crossidx-1)]; % [start, end, angle_range]
             end
         end
     end
