@@ -30,8 +30,8 @@ for sp=1:length(speeds)
     fprintf('Stats_2_2: Running main_2_2 with speed value: %0.2f.\n', speeds(sp));
     mainP.shift.val = speeds(sp);
     main_2_2
-    for p=1:size(data_peaks,1)
-        for m=1:size(data_peaks,2)
+    for m=1:length(mainP.methods_set)
+        for p=1:length(mainP.pts_range)
             if isfield(data_peaks{m}{p}, 'peak_3db')
                 pts_3dB_width(p,m,sp) = data_peaks{m}{p}.peak_3db(2);
             end

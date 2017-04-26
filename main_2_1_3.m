@@ -101,4 +101,69 @@ for p=1:length(mainP.pts_range)
 end
 mainP.files_prefix = '';
 close
+
+%% Plots fit
+linestyle_list = {'-.','--','-',':'};
+markers_list = {'+','x','diamond','o'};
+colors_list = {'b','r','g','k','m','c'};
+if mainP.save_plots
+    figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+else
+    figure;
+end
+
+for p=1:length(mainP.pts_range)
+    clf();
+    hold on;
+    scallop_loss = zeros(length(mainP.methods_set), length(num_beams));
+    loss_fit = cell([1 length(mainP.methods_set)]);
+    for m=1:length(mainP.methods_set)
+        for b=1:length(num_beams)
+            scallop_loss(m,b) = max(pts_gain(p, m, b, :)) - ...
+                min(pts_gain(p, m, b, :));
+        end
+        loss_fit{m} = fit(num_beams', scallop_loss(m,:)', 'power2');
+        scatter(num_beams, scallop_loss(m,:), colors_list{m}, ...
+            'Marker',  markers_list{m}, 'LineWidth', 2);
+    end
+    
+    clr_idx = length(mainP.methods_set) + 1;
+    line('XData', [num_beams(1) num_beams(end)], 'YData', [1 1], ...
+        'LineWidth', 2, 'LineStyle', linestyle_list{mod(clr_idx,length(linestyle_list))+1}, ...
+        'Color', colors_list{mod(clr_idx,length(colors_list))+1});
+    if length(num_beams) > 1
+        xlim([num_beams(1) num_beams(end)]) 
+    end
+    
+    for m=1:length(mainP.methods_set)
+        pl = plot(loss_fit{m}, 'predobs');
+        for pidx=1:length(pl)
+            pl(pidx).LineStyle = linestyle_list{m};
+            pl(pidx).Color = colors_list{m};
+            pl(pidx).LineWidth = 2;
+        end
+%         loss_legend{2*m-1} = mainP.methods_set{m};
+%         loss_legend{2*m} = strcat(mainP.methods_set{m}, '- Power fit');
+%         loss_legend{2*m} = strcat(mainP.methods_set{m}, ...
+%             '- Power fit: ', num2str(loss_fit{m}.a), '*x^', ...
+%             num2str(loss_fit{m}.b), ' + ', num2str(loss_fit{m}.c));
+    end
+    
+    hold off;
+    legend([mainP.methods_set '1dB threshold'], 'Location', 'best');
+    ylabel('Max scalloping loss [dB]');
+    xlabel('Number of transmitted beams');
+    if mainP.save_plots
+        mainP.files_prefix = strcat('loss_beams_fit_p', ...
+            int2str(mainP.pts_range(p)), '_');
+        saveas(gcf, mainP.outputFileName('png'), 'png')
+        saveas(gcf, mainP.outputFileName('fig'), 'fig')
+        save(strcat(mainP.save_folder, mainP.files_prefix, ...
+            'results_2_1_3.mat'), 'num_beams', 'pts_gain', 'loss_fit', '-v7.3')
+    else
+        pause
+    end
+end
+mainP.files_prefix = '';
+close
 fprintf('Main_2_1_3 finished!')

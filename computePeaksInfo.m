@@ -73,7 +73,7 @@ for p=1:length(mainP.pts_range)
     end
     [~, pangle_idx] = min(abs(pangle - pts_center(p)));
     [~, pt_idx] = min(abs(pts_center - pangle(pangle_idx)));
-    if ~mainP.shift_per_beam || (pts_center(p) - pangle(pangle_idx) < 1e-3 && (pt_idx == p))
+    if ~mainP.shift_per_beam || (pts_center(p) - pangle(pangle_idx) < 25*1e-3 && (pt_idx == p))
         if pangle(pangle_idx) - pts_center(p) < 0 && pangle_idx < length(pangle)
             % -> compare with next index
             [~, pt_idx] = min(abs(pts_center - pangle(pangle_idx+1)));
