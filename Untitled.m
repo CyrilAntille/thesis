@@ -51,9 +51,12 @@ for m=1:length(methods_set)
 end
 
 % 2. Load and modify pts_gain
+ext_folder = {'nospeckle_ext_final/', 'speckle_2_ext_fake/', 'speckle_42_ext/'};
+ext = 8;
+
 load(strcat(source_folder, scenario_folder{1}, result_file));
 [p,~,b,s] = size(pts_gain);
-gain_size = [p,length(scenario_folder),b,s];
+gain_size = [p,length(scenario_folder),b+ext,s];
 methods_gain = cell([1, length(methods_set)]);
 for m=1:length(methods_set)
     methods_gain{m} = zeros(gain_size);
@@ -61,14 +64,20 @@ end
 for f=1:length(scenario_folder)
     load(strcat(source_folder, scenario_folder{f}, result_file));
     for m=1:length(methods_set)
-        methods_gain{m}(:,f,:,:) = pts_gain(:,m,:,:);
+%         methods_gain{m}(:,f,:,:) = pts_gain(:,m,:,:);
+        methods_gain{m}(:,f,1:b,:) = pts_gain(:,m,:,:);
+    end
+    load(strcat(source_folder, ext_folder{f}, result_file));
+    for m=1:length(methods_set)
+        methods_gain{m}(:,f,b+1:b+ext,:) = pts_gain(:,m,2:end,:);
     end
 end
+num_beams = cat(2, 11:10:151, 251:100:951);
 
 %% main_2_1_3 plots
-for m=1:length(methods_set)
-    mainP = methods_mainP{m};
-    pts_gain = methods_gain{m};
+for mp=1:length(methods_set)
+    mainP = methods_mainP{mp};
+    pts_gain = methods_gain{mp};
     
     % Plots
     linestyle_list = {'-.','--','-',':'};
@@ -188,3 +197,106 @@ for m=1:length(methods_set)
     close
 end
 fprintf('Main_2_1_3 finished!')
+
+%% Simulated probe bandwidth
+P = Parameters();
+NFFT = 4096;
+ft = fft(P.Tx.ImpulseResp, NFFT);
+db_onesided = db(abs(ft(1:NFFT/2+1)));
+f = P.fs/2 * linspace(0,1,NFFT/2+1);
+
+max_imp = max(db_onesided(:));
+max_idx = find(db_onesided > max_imp - 6);
+
+bdw = [f(max_idx(1)), f(max_idx(end))]
+
+figure; plot(f, db_onesided)
+
+%%
+% k = 2pi/lambdac sin(theta)
+% TODO: Explain optimal number of subdimensions based on image sector
+% nsd = 2 * sin(theta) * N_elements
+% 
+% k+ = (K-1)/2 = x / nel = sin(theta)/2
+% 
+% theta = 17.5
+% -> find x and compare to nsd/2.
+% 
+% plot beamspace projections (See INF5410) with corresponding image sector
+% 
+% k = 4*pi * 0.3
+
+%% heavy computation
+clear all
+% num_beams = [65, 141, 145, 951];
+num_beams = [951];
+% num_beams_speckle = [75, 91, 101, 301];
+
+mainP = MainParameters();
+mainP.pts_range = [40];
+mainP.pts_azimuth = [0];
+mainP.shift_per_beam = true;
+mainP.speckle_load = false;
+mainP.speckle_file = '..\data\2_1_speckle_42_10-6.mat';
+mainP.save_plots = true;
+mainP = mainP.createOutputDir();
+origin_folder = mainP.save_folder;
+fprintf('\n--------------------------------------------------------------------------------------------------------------------------------------\n')
+
+% 2.1.1: Single point linear velocity
+for b=1:length(num_beams)
+    mainP.num_beams = num_beams(b);
+    mainP.P = mainP.copyP(mainP.num_beams);
+    mainP.shift = Shift(ShiftType.LinearSpeed, 0,  mainP.num_beams, 0, 1);
+    mainP.save_folder = strcat(origin_folder, '2.1.1/');
+    mainP = mainP.createOutputDir();
+    stats_2_2
+    clearvars -except mainP num_beams origin_folder b
+end
+fprintf('\n-------------------------------------------- 2.1.1 finished! ----------------------------------------------------------------\n')
+
+% 2.1.2: Single point various motion directions
+directions = [-45, 45, 90];
+for b=1:length(num_beams)
+    for d=1:length(directions)
+        mainP.num_beams = num_beams(b);
+        mainP.P = mainP.copyP(mainP.num_beams);
+        mainP.shift = Shift(ShiftType.LinearSpeed, 0,  mainP.num_beams, ...
+            directions(d), 1);
+        mainP.save_folder = strcat(origin_folder, '2.1.2/');
+        mainP = mainP.createOutputDir();
+        stats_2_2
+        clearvars -except mainP num_beams directions origin_folder b d
+    end
+end
+fprintf('\n-------------------------------------------- 2.1.2 finished! ----------------------------------------------------------------\n')
+
+% 2.2.1: Two points linear velocity
+mainP.pts_range = [40, 40];
+mainP.pts_azimuth = [0, 1];
+for b=1:length(num_beams)
+    mainP.num_beams = num_beams(b);
+    mainP.P = mainP.copyP(mainP.num_beams);
+    mainP.shift = Shift(ShiftType.LinearSpeed, 0,  mainP.num_beams, 0, 1);
+    mainP.save_folder = strcat(origin_folder, '2.2.1/');
+    mainP = mainP.createOutputDir();
+    stats_2_2
+    clearvars -except mainP num_beams origin_folder b
+end
+fprintf('\n-------------------------------------------- 2.2.1 finished! ----------------------------------------------------------------\n')
+
+% 2.2.2: Two points various motion directions
+directions = [-45, 45, 90];
+for b=1:length(num_beams)
+    for d=1:length(directions)
+        mainP.num_beams = num_beams(b);
+        mainP.P = mainP.copyP(mainP.num_beams);
+        mainP.shift = Shift(ShiftType.LinearSpeed, 0,  mainP.num_beams, ...
+            directions(d), 1);
+        mainP.save_folder = strcat(origin_folder, '2.2.2/');
+        mainP = mainP.createOutputDir();
+        stats_2_2
+        clearvars -except mainP num_beams directions origin_folder b d
+    end
+end
+fprintf('\n-------------------------------------------- 2.2.2 finished! ----------------------------------------------------------------\n')

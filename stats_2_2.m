@@ -1,29 +1,36 @@
 %% 2.2 - Motion between beams - Stats
-clear all
-mainP = MainParameters();
-mainP.pts_range = [40]; % Add a range (in mm) for each point
-mainP.pts_azimuth = [0]; % Add a range (in mm) for each point
-mainP.num_beams = 65; % can be a single value or list of values
-% mainP.shift = Shift(ShiftType.RadialVar, 0,  mainP.num_beams, 0, 1);
-mainP.shift = Shift(ShiftType.LinearSpeed, 0,  mainP.num_beams, 0, 1);
-mainP.shift_per_beam = true;
-mainP.speckle_load = true;
-% mainP.interp_upsample = 1300;
+% clear all
+% clearvars -except mainP
+if ~exist('mainP', 'var')
+    mainP = MainParameters();
+    mainP.pts_range = [40]; % Add a range (in mm) for each point
+    mainP.pts_azimuth = [0]; % Add a range (in mm) for each point
+    mainP.num_beams = 141;
+    % mainP.shift = Shift(ShiftType.RadialVar, 0,  mainP.num_beams, 0, 1);
+    mainP.shift = Shift(ShiftType.LinearSpeed, 0,  mainP.num_beams, 0, 1);
+    mainP.shift_per_beam = true;
+    mainP.speckle_load = false;
+    % mainP.interp_upsample = 1300;
+    mainP.speckle_file = '..\data\2_1_speckle_42_10-6.mat';
 
-if (mainP.shift.type == ShiftType.RadialVar || ...
-        mainP.shift.type == ShiftType.RadialCst)
-    % This allows to set mainP.pts_range above as radius instead.
-    % This step transforms radiuses to ranges.
-    mainP.pts_range = mainP.pts_range.*...
-        cos(sin(mainP.pts_azimuth./mainP.pts_range));
+    if (mainP.shift.type == ShiftType.RadialVar || ...
+            mainP.shift.type == ShiftType.RadialCst)
+        % This allows to set mainP.pts_range above as radius instead.
+        % This step transforms radiuses to ranges.
+        mainP.pts_range = mainP.pts_range.*...
+            cos(sin(mainP.pts_azimuth./mainP.pts_range));
+    end
+else
+%     mainP.save_folder = '../output/';
+%     mainP.shift = Shift(ShiftType.LinearSpeed, 0,  mainP.num_beams, 0, 1);
+%     mainP.save_plots = true;
+%     mainP.P = mainP.copyP(mainP.num_beams);
+%     mainP = mainP.createOutputDir();
 end
 
-mainP.save_plots = true;
-mainP.P = mainP.copyP(mainP.num_beams);
-mainP = mainP.createOutputDir();
 
 %%
-speeds = -0.5:1/4:0.5; % Unit depends on ShiftType
+speeds = -0.5:1/8:0.5; % Unit depends on ShiftType
 pts_3dB_width = zeros([length(mainP.pts_range),...
     length(mainP.methods_set), length(speeds)]);
 for sp=1:length(speeds)
@@ -37,7 +44,8 @@ for sp=1:length(speeds)
             end
         end
     end
-    clearvars -except mainP pts_3dB_width speeds
+%     clearvars -except mainP pts_3dB_width speeds
+    clearvars data_DA data_BF
 end
 mainP.files_prefix = 'speeds_';
 fprintf('\nNSaving speed  data  into: %s\n', mainP.outputFileName('mat'))

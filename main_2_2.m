@@ -2,8 +2,8 @@
 % clear all
 if ~exist('mainP', 'var')
     mainP = MainParameters();
-    mainP.pts_range = [40]; % Add a range (in mm) for each point
-    mainP.pts_azimuth = [0];
+    mainP.pts_range = [40, 40]; % Add a range (in mm) for each point
+    mainP.pts_azimuth = [0, 2];
     mainP.num_beams = 71;
     % Note: Azimuth distance at 40 mm range: 23.6416 mm
     % 0.2 ms per beam -> beams 'velocity' = 1.665 m/s
@@ -155,8 +155,13 @@ for m=1:length(mainP.methods_set)
 %         radius = linspace(radius(1), radius(end), mainP.interp_upsample);
 %     end
     warning('off')
-    [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
-        thetas, 1e3 * radius, 2024, 2024, 'spline');
+    if mainP.interp_upsample > 0
+        [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
+            thetas, 1e3 * radius, length(thetas), length(radius), 'spline'); % Test
+    else
+        [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
+            thetas, 1e3 * radius, 2024, 2024, 'spline');
+    end
     warning('on')
     img = db(abs(img));
 
@@ -164,7 +169,7 @@ for m=1:length(mainP.methods_set)
 %         b_shift = Shift(mainP.shift.type, mainP.shift.val, ...
 %             m_P.Tx.NTheta, mainP.shift.direction);
         b_shift = Shift(mainP.shift.type, mainP.shift.val * ...
-            m_P.Tx.NTheta / mainP.interp_upsample, ...
+            m_P.Tx.NTheta / max([1, mainP.interp_upsample]), ...
             length(thetas), mainP.shift.direction);
         beam_shift = m_P.Tx.SinTheta(2) - m_P.Tx.SinTheta(1);
     else
@@ -200,7 +205,6 @@ for m=1:length(mainP.methods_set)
             end
         end
     end
-
     pad = 0.4; % padding in mm
     az_lim = [max(Xs(1), az_lim(1) - pad), min(Xs(end), az_lim(2) + pad)];
     r_lim = [max(Zs(1), r_lim(1) - pad), min(Zs(end), r_lim(2) + pad)];
@@ -211,11 +215,14 @@ for m=1:length(mainP.methods_set)
     maxZs = find(Zs >= r_lim(end), 1);
     pZs = Zs(minZs:maxZs);
     p_img = img(minZs:maxZs, minXs:maxXs);
-    p_img(p_img < -1000) = -1000; % contourf doesn't handle non-finite values
-
+    p_img(~isfinite(p_img)) = -1000; % contourf doesn't handle non-finite values
+    [xGrid, zGrid] = meshgrid(linspace(pXs(1), pXs(end), 2024), ...
+        linspace(pZs(1), pZs(end), 2024));
+	p_img = interp2(pXs, pZs, p_img, xGrid, zGrid, 'spline', 0);
     subplot(2,ceil(length(mainP.methods_set)/2),m);
-    contourf(pXs, pZs, p_img, [-1000, max_gain-10, max_gain + 3], 'ShowText','on');
-    colormap parula
+%     contourf(pXs, pZs, p_img, [-1000, max_gain-10, max_gain + 3], 'ShowText','on');
+    contourf(xGrid, zGrid, p_img, [-100000, max_gain-10, max_gain + 3], 'ShowText','on');
+    colormap gray
     set(gca,'YDir','Reverse')
     xlabel('azimuth [mm]');
     ylabel('range [mm]');

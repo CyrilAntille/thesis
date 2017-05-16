@@ -93,8 +93,8 @@ for p=1:length(mainP.pts_range)
             int2str(mainP.pts_range(p)), '_');
         saveas(gcf, mainP.outputFileName('png'), 'png')
         saveas(gcf, mainP.outputFileName('fig'), 'fig')
-        save(strcat(mainP.save_folder, mainP.files_prefix, ...
-            'results_2_1_3.mat'), 'num_beams', 'pts_gain', '-v7.3')
+%         save(strcat(mainP.save_folder, mainP.files_prefix, ...
+%             'results_2_1_3.mat'), 'num_beams', 'pts_gain', '-v7.3')
     else
         pause
     end
@@ -112,7 +112,9 @@ else
     figure;
 end
 
+x1db = cell([1 length(mainP.pts_range)]);
 for p=1:length(mainP.pts_range)
+    x1db{p} = zeros([length(mainP.methods_set) 3]);
     clf();
     hold on;
     scallop_loss = zeros(length(mainP.methods_set), length(num_beams));
@@ -123,9 +125,25 @@ for p=1:length(mainP.pts_range)
                 min(pts_gain(p, m, b, :));
         end
         loss_fit{m} = fit(num_beams', scallop_loss(m,:)', 'power2');
+%         if m == 2 % outlier rejection
+%             loss_fit{m} = fit(num_beams(2:end)', ...
+%                 scallop_loss(m,2:end)', 'power2');
+%         end
         scatter(num_beams, scallop_loss(m,:), colors_list{m}, ...
             'Marker',  markers_list{m}, 'LineWidth', 2);
+        x = 1:2000000;
+        c2 = feval(loss_fit{m}, x);
+        c2 = find(c2 <= 1, 1);
+        cm = predint(loss_fit{m}, x);
+        c1 = find(cm(:,1) <= 1, 1);
+        c3 = find(cm(:,2) <= 1, 1);
+        
+        c1(isempty(c1)) = -1;
+        c2(isempty(c2)) = -1;
+        c3(isempty(c3)) = -1;
+        x1db{p}(m,:) = [c1, c2, c3];
     end
+%     x1db{p}
     
     clr_idx = length(mainP.methods_set) + 1;
     line('XData', [num_beams(1) num_beams(end)], 'YData', [1 1], ...
@@ -159,7 +177,8 @@ for p=1:length(mainP.pts_range)
         saveas(gcf, mainP.outputFileName('png'), 'png')
         saveas(gcf, mainP.outputFileName('fig'), 'fig')
         save(strcat(mainP.save_folder, mainP.files_prefix, ...
-            'results_2_1_3.mat'), 'num_beams', 'pts_gain', 'loss_fit', '-v7.3')
+            'results_2_1_3.mat'), 'num_beams', 'pts_gain', ...
+            'loss_fit', 'x1db', 'mainP', '-v7.3')
     else
         pause
     end
