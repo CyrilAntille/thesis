@@ -285,7 +285,7 @@ for b=1:length(num_beams)
 end
 fprintf('\n-------------------------------------------- 2.2.1 finished! ----------------------------------------------------------------\n')
 
-% 2.2.2: Two points various motion directions
+%% 2.2.2: Two points various motion directions
 directions = [-45, 45, 90];
 for b=1:length(num_beams)
     for d=1:length(directions)
@@ -300,3 +300,51 @@ for b=1:length(num_beams)
     end
 end
 fprintf('\n-------------------------------------------- 2.2.2 finished! ----------------------------------------------------------------\n')
+
+%% Plots merging for stats_2_2
+%% Used for 2_1_3 plots to compare speckle and non-speckle scenarios
+source_folder = '../output/2017-05-15_18.46.59/2_1_1/';
+scenario_folder = {'2017-05-15_18.46.59/', '2017-05-15_19.34.06/', ...
+    '2017-05-15_20.57.25/'};
+scenario_name = {'65', '141', '145'};
+result_file = 'speeds_p1_results_stats_2_2.mat';
+
+% 1. Load and modify mainP
+load(strcat(source_folder, scenario_folder{1}, 'mainP.mat'));
+mainP = obj;
+methods_set = mainP.methods_set;
+methods_mainP = cell([1, length(methods_set)]);
+for m=1:length(methods_set)
+    mainP.save_plots = true;
+    mainP.save_folder = strcat(source_folder, 'merged/', methods_set{m}, '/');
+    mainP.methods_set = cell([1 length(scenario_name)]);
+    for s=1:length(scenario_name)
+        mainP.methods_set{s} = strcat(methods_set{m}, '-', scenario_name{s});
+    end
+    mainP = mainP.createOutputDir();
+    methods_mainP{m} = mainP;
+end
+
+% 2. Load and modify pts_gain
+ext_folder = {'nospeckle_ext_final/', 'speckle_2_ext_fake/', 'speckle_42_ext/'};
+ext = 8;
+
+load(strcat(source_folder, scenario_folder{1}, result_file));
+[p,~,b,s] = size(pts_gain);
+gain_size = [p,length(scenario_folder),b+ext,s];
+methods_gain = cell([1, length(methods_set)]);
+for m=1:length(methods_set)
+    methods_gain{m} = zeros(gain_size);
+end
+for f=1:length(scenario_folder)
+    load(strcat(source_folder, scenario_folder{f}, result_file));
+    for m=1:length(methods_set)
+%         methods_gain{m}(:,f,:,:) = pts_gain(:,m,:,:);
+        methods_gain{m}(:,f,1:b,:) = pts_gain(:,m,:,:);
+    end
+    load(strcat(source_folder, ext_folder{f}, result_file));
+    for m=1:length(methods_set)
+        methods_gain{m}(:,f,b+1:b+ext,:) = pts_gain(:,m,2:end,:);
+    end
+end
+num_beams = cat(2, 11:10:151, 251:100:951);

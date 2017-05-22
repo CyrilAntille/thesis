@@ -67,9 +67,13 @@ end
 for p=1:length(mainP.pts_range)
     scat_p = scatterer_points{p};
     % Finds nearest peak
-    [pdb, pangle] = findpeaks(scat_p.beam_trajectory(3,:), scat_p.beam_trajectory(1,:));
+    try
+        [pdb, pangle] = findpeaks(scat_p.beam_trajectory(3,:), scat_p.beam_trajectory(1,:));
+    catch
+        continue
+    end
     if isempty(pangle)
-        break
+        continue
     end
     [~, pangle_idx] = min(abs(pangle - pts_center(p)));
     [~, pt_idx] = min(abs(pts_center - pangle(pangle_idx)));

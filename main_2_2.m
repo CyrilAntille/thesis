@@ -12,7 +12,7 @@ if ~exist('mainP', 'var')
     mainP.shift_per_beam = true;
     mainP.save_plots = false;
     mainP.speckle_load = false;
-    mainP.interp_upsample = 3*71;
+%     mainP.interp_upsample = 3*71;
     mainP.normalize_bfim = false;
     
     if true && (mainP.shift.type == ShiftType.RadialVar || ...
@@ -155,13 +155,16 @@ for m=1:length(mainP.methods_set)
 %         radius = linspace(radius(1), radius(end), mainP.interp_upsample);
 %     end
     warning('off')
-    if mainP.interp_upsample > 0
-        [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
-            thetas, 1e3 * radius, length(thetas), length(radius), 'spline'); % Test
-    else
-        [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
-            thetas, 1e3 * radius, 2024, 2024, 'spline');
-    end
+%     if mainP.interp_upsample > 0
+%         [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
+%             thetas, 1e3 * radius, length(thetas), length(radius), 'spline'); % Test
+%     else
+%         [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
+%             thetas, 1e3 * radius, 2024, 2024, 'spline');
+%     end
+
+    [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
+        thetas, 1e3 * radius, max([500, length(thetas)]), length(radius), 'spline'); % Test
     warning('on')
     img = db(abs(img));
 
@@ -216,12 +219,14 @@ for m=1:length(mainP.methods_set)
     pZs = Zs(minZs:maxZs);
     p_img = img(minZs:maxZs, minXs:maxXs);
     p_img(~isfinite(p_img)) = -1000; % contourf doesn't handle non-finite values
-    [xGrid, zGrid] = meshgrid(linspace(pXs(1), pXs(end), 2024), ...
-        linspace(pZs(1), pZs(end), 2024));
+%     [xGrid, zGrid] = meshgrid(linspace(pXs(1), pXs(end), 2024), ...
+%         linspace(pZs(1), pZs(end), 2024));
+    [xGrid, zGrid] = meshgrid(linspace(pXs(1), pXs(end), max([500, length(pXs)])), ...
+        linspace(pZs(1), pZs(end), length(pZs)));
 	p_img = interp2(pXs, pZs, p_img, xGrid, zGrid, 'spline', 0);
     subplot(2,ceil(length(mainP.methods_set)/2),m);
 %     contourf(pXs, pZs, p_img, [-1000, max_gain-10, max_gain + 3], 'ShowText','on');
-    contourf(xGrid, zGrid, p_img, [-100000, max_gain-10, max_gain + 3], 'ShowText','on');
+    contourf(xGrid, zGrid, p_img, [-999, max_gain-10, max_gain + 3], 'ShowText','on');
     colormap gray
     set(gca,'YDir','Reverse')
     xlabel('azimuth [mm]');
