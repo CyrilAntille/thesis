@@ -6,8 +6,9 @@ classdef MainParameters
         num_beams = 61;
         P = Parameters(61); % Argument must match num_beams
         % Note: If num_beams changed. must call copyP()
-        medium_range = [35, 60] % mm
+        medium_range = [35, 50] % mm
         % medium_range should start P.MinRadImage (35mm)
+        NoMLA = 1
         
         % Speckle raw image creation parameters
         speckle_create = false;
@@ -17,7 +18,8 @@ classdef MainParameters
         % Speckle creation can take a long time. It is therefore
         % recommended to save it in a file.
         speckle_load = true;
-        speckle_file = '..\data\2_1_speckle_2_10-6.mat';
+%         speckle_file = '..\data\2_1_speckle_2_10-6.mat';
+        speckle_file = '..\data\2_1_speckle_42_10-6.mat';
         % Speckle noise is added to the beamformed image if the speckle raw
         % image (speckle_raw) exists in the workspace (so most of the times
         % if speckle_create or speckle_load are true)
@@ -46,7 +48,7 @@ classdef MainParameters
         tavg = 2; % Number of samples used for temporal averaging
         % nsd = ceil(rad2deg(P.Tx.Theta(end))); % Number of subdimensions.
         % All but DAS and MV.
-        nsd = 0; % Number of subdimensions for IAA subspace span
+        nsd = 31; % Number of subdimensions for IAA subspace span
         % If nsd = 0, optimal nsd estimated from eigenvalues decomposition
         upsample_number = 500; % Number of received beams for interpolation
         % by phase shifting. Only IAA MB/MB Upsampled.
@@ -68,11 +70,37 @@ classdef MainParameters
     end
     
     methods
-        function P = copyP(obj, NTheta)
+        function P = copyP(obj, NTheta, NoMLA)
+            if nargin == 2
+                NoMLA = 1;
+            end
             P = copyStruct(obj.P);
             P.Tx.NTheta = NTheta;
             P.Tx.SinTheta = linspace(-P.Tx.SinThMax,P.Tx.SinThMax,P.Tx.NTheta);
             P.Tx.Theta = asin(P.Tx.SinTheta);
+            P.Rx.NoMLA    = NoMLA;
+            P.Rx.DeltaSinTh = 0;
+            nm = floor(P.Rx.NoMLA/2);
+            diffSinTh = (P.Tx.SinTheta(2) - P.Tx.SinTheta(1)) / (nm+1);
+            for n=1:nm
+                P.Rx.DeltaSinTh = horzcat(-n*diffSinTh, P.Rx.DeltaSinTh, n*diffSinTh);
+            end
+            P.Rx.SinTheta = linspace(-P.Tx.SinThMax,P.Tx.SinThMax, P.Rx.NoMLA*P.Tx.NTheta);
+            P.Rx.Theta = asin(P.Rx.SinTheta);
+        end
+        function scanGridTheta = getScanGrid(obj, bf_method)
+            scanGridTheta = obj.P.Rx.Theta;
+            if strfind(bf_method, 'Upsampled')
+                NTheta = obj.upsample_number;
+                scanGridSin = linspace(obj.P.Tx.SinTheta(1),obj.P.Tx.SinTheta(end),NTheta);
+                scanGridTheta = asin(scanGridSin);
+            elseif strfind(bf_method, 'IAA-MBMB-') | strfind(bf_method, 'IAA-MBSB-')
+                upsample = strsplit(bf_method, '-');
+                upsample = str2double(upsample(end));
+                NTheta = length(obj.P.Tx.SinTheta);
+                scanGridSin = interp1(1:NTheta, obj.P.Tx.SinTheta, 1:1/upsample:NTheta);
+                scanGridTheta = asin(scanGridSin);
+            end
         end
         function output_file = outputFileName(obj, file_type)
             % Output is .png if is_plot=true, else .mat

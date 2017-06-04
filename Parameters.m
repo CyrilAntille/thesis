@@ -109,10 +109,17 @@ function P = Parameters(NTheta)
   P.Tx.SinTheta = linspace(-P.Tx.SinThMax,P.Tx.SinThMax,P.Tx.NTheta);
   P.Tx.Theta = asin(P.Tx.SinTheta);
   
-  
   P.Tx.FocRad   = 40e-3;    % Focal radius
-  P.Rx.NoMLA    = 1;        % No of Rx-lines per Tx-line 
-  P.Rx.DeltaTh  = 0;        % Rx-offset relative to Tx-line [rad]
   P.MinRadImage = 35e-3;     % Minimum radius for which data is recorded [m]
 
+  P.Rx.NoMLA    = 1;        % No of Rx-lines per Tx-line 
+%   P.Rx.DeltaTh  = 0;        % Rx-offset relative to Tx-line [rad]
+  P.Rx.DeltaSinTh = 0;
+  nm = floor(P.Rx.NoMLA/2);
+  diffSinTh = (P.Tx.SinTheta(2) - P.Tx.SinTheta(1)) / nm;
+  for n=1:nm
+      P.Rx.DeltaSinTh = horzcat(-n*diffSinTh, P.Rx.DeltaSinTh, n*diffSinTh);
+  end
+  P.Rx.SinTheta = linspace(-P.Tx.SinThMax,P.Tx.SinThMax, P.Rx.NoMLA*P.Tx.NTheta);
+  P.Rx.Theta = asin(P.Rx.SinTheta);
 

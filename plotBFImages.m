@@ -6,11 +6,8 @@ if mainP.save_plots
 else
     figure;
 end
-thetas = mainP.P.Tx.Theta;
-if mainP.interp_upsample > 0
-    thetas = linspace(mainP.P.Tx.Theta(1), mainP.P.Tx.Theta(end), mainP.interp_upsample);
-end
 for m=1:length(mainP.methods_set)
+    thetas = mainP.getScanGrid(mainP.methods_set{m});
     m_BF = data_BF{m};
     for s=1:mainP.shift.num_shifts
         if mainP.shift_per_beam
