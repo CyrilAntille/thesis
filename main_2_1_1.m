@@ -1,18 +1,15 @@
 %% 2.1: Motion between frames - loss vs shift
 clear all
 mainP = MainParameters();
-mainP.pts_range = [40];
+mainP.pts_range = [55];
 mainP.pts_azimuth = [0];
-mainP.num_beams = 61;
+mainP.num_beams = 31;
+mainP.NoMLA = 1;
 mainP.shift = Shift(ShiftType.RadialVar, 1/8, 17, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
-mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
+% mainP.methods_set = {'DAS', 'IAA-MBMB', 'IAA-MBMB-2', 'IAA-MBMB-4'};
 mainP.save_plots = true;
 mainP.speckle_load = false;
-mainP.save_all_data = false;
-mainP.normalize_bfim = false;
-mainP.norm_variant = 1;
-mainP.interp_upsample = 0;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
         mainP.shift.type == ShiftType.RadialCst
@@ -21,7 +18,7 @@ if mainP.shift.type == ShiftType.RadialVar || ...
     mainP.pts_range = mainP.pts_range.*...
         cos(sin(mainP.pts_azimuth./mainP.pts_range));
 end
-mainP.P = mainP.copyP(mainP.num_beams);
+mainP.P = mainP.copyP(mainP.num_beams, mainP.NoMLA);
 mainP = mainP.createOutputDir();
 
 %% Loss vs shift
@@ -49,8 +46,8 @@ data_peaks = cell([1, length(mainP.methods_set)]);
 for m=1:length(mainP.methods_set)
     data_peaks{m} = cell([1, mainP.shift.num_shifts]);
     for s=1:mainP.shift.num_shifts
-        data_peaks {m}{s} = computePeaksInfo(mainP, ...
-            data_phantom{s}, data_DA{s}.Radius, data_BF{m}{s});
+        data_peaks {m}{s} = computePeaksInfo(mainP, data_phantom{s}, ...
+            data_DA{s}.Radius, data_BF{m}{s}, mainP.methods_set{m});
     end
 end
 
@@ -77,7 +74,7 @@ else
 end
 
 shifts = mainP.shift.getShifts(mainP.P); % Assumes shifts in radians
-shifts = shifts ./ (mainP.P.Tx.Theta(2) - mainP.P.Tx.Theta(1));
+shifts = sin(shifts) ./ (mainP.P.Tx.SinTheta(2) - mainP.P.Tx.SinTheta(1));
 for p=1:length(mainP.pts_range)
     pl = plot(shifts, squeeze(pts_gain(p,:,:)), 'LineWidth', 2);
     for pidx=1:length(pl)

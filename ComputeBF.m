@@ -18,7 +18,7 @@ elseif strcmp(bf_method, 'MV-MB')
     bf_im = getCaponMultiBeam(dataCube,0,mainP.dl,V, ...
         pi*mainP.P.Rx.SinTheta,pi*mainP.P.Rx.SinTheta,1,0,verbose,0);
     bf_im = abs(bf_im);
-elseif strfind(bf_method, 'MV')
+elseif strfind(bf_method, 'MV-')
     sbl = strsplit(bf_method, '-');
     sbl = round(str2double(sbl(end)) * mainP.P.Rx.no_elements);
     if sbl >= mainP.P.Rx.no_elements

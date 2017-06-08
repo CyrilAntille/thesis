@@ -6,7 +6,7 @@ classdef MainParameters
         num_beams = 61;
         P = Parameters(61); % Argument must match num_beams
         % Note: If num_beams changed. must call copyP()
-        medium_range = [35, 50] % mm
+        medium_range = [35, 60] % mm
         % medium_range should start P.MinRadImage (35mm)
         NoMLA = 1
         
@@ -92,13 +92,13 @@ classdef MainParameters
             scanGridTheta = obj.P.Rx.Theta;
             if strfind(bf_method, 'Upsampled')
                 NTheta = obj.upsample_number;
-                scanGridSin = linspace(obj.P.Tx.SinTheta(1),obj.P.Tx.SinTheta(end),NTheta);
+                scanGridSin = linspace(obj.P.Rx.SinTheta(1),obj.P.Rx.SinTheta(end),NTheta);
                 scanGridTheta = asin(scanGridSin);
             elseif strfind(bf_method, 'IAA-MBMB-') | strfind(bf_method, 'IAA-MBSB-')
                 upsample = strsplit(bf_method, '-');
                 upsample = str2double(upsample(end));
-                NTheta = length(obj.P.Tx.SinTheta);
-                scanGridSin = interp1(1:NTheta, obj.P.Tx.SinTheta, 1:1/upsample:NTheta);
+                NTheta = length(obj.P.Rx.SinTheta);
+                scanGridSin = interp1(1:NTheta, obj.P.Rx.SinTheta, 1:1/upsample:NTheta);
                 scanGridTheta = asin(scanGridSin);
             end
         end

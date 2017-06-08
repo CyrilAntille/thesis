@@ -102,8 +102,12 @@ for i=indsI
 
   for iter=2:nIterations
     Rline = A*diag(p)*A';  % Estimate of covariance matrix using the sparse model
-    Ri = pinv(Rline + regCoef/K*trace(Rline)*I);
-
+    try
+        Ri = pinv(Rline + regCoef/K*trace(Rline)*I);
+    catch
+        fprintf('\nIAA-MB: Covariance matrix inversion did not converge\n');
+        break
+    end
     % Whether or not we're forced to use matlab-slow for-loop [Remove this "feature"?]
     if useSlowForLoop
       

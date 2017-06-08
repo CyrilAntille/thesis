@@ -26,10 +26,11 @@ classdef Shift
         function shifts = getShifts(obj, P)
             shift_val = obj.val;
             if obj.type == ShiftType.RadialVar
-                shift_val = (P.Tx.Theta(2) - P.Tx.Theta(1)) * shift_val;
+%                 shift_val = (P.Tx.Theta(2) - P.Tx.Theta(1)) * shift_val;
+                shift_val = (P.Tx.SinTheta(2) - P.Tx.SinTheta(1)) * shift_val;
             elseif obj.type == ShiftType.LinearVar
-                shift_val = (P.Tx.Theta(2) - P.Tx.Theta(1)) * shift_val;
-                shift_val = sin(shift_val) * P.Tx.FocRad;
+                shift_val = (P.Tx.SinTheta(2) - P.Tx.SinTheta(1)) * ...
+                    shift_val * P.Tx.FocRad;
             elseif obj.type == ShiftType.LinearSpeed
                 shift_val = obj.val * 2*1e-4; % 0.2ms per beam
             elseif obj.type == ShiftType.LinearSpeedFrame
@@ -39,6 +40,9 @@ classdef Shift
             shifts = (-max_shift:max_shift) * shift_val;
             if mod(obj.num_shifts, 2) == 0
                 shifts = shifts(2:end);
+            end
+            if obj.type == ShiftType.RadialVar || obj.type == ShiftType.LinearVar
+                shifts = asin(shifts);
             end
             shifts = repelem(shifts, obj.stop_and_go_ratio); % stop-and-go
         end

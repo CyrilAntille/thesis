@@ -1,4 +1,5 @@
-function [ scatterer_points ] = computePeaksInfo(mainP, phantom, da_radius, bf_im)
+function [ scatterer_points ] = computePeaksInfo(mainP, phantom, ...
+    da_radius, bf_im, bf_method)
 %COMPUTEPEAKSINFO Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -9,12 +10,11 @@ shifts = mainP.shift.getShifts(mainP.P);
 
 % Fits radius and thetas to image size
 radius = linspace(da_radius(1), da_radius(end), size(bf_im, 1));
-shifts = linspace(shifts(1), shifts(end), size(bf_im, 2));
-thetas = linspace(mainP.P.Tx.Theta(1), mainP.P.Tx.Theta(end), size(bf_im, 2));
+thetas = mainP.getScanGrid(bf_method);
 for p=1:length(mainP.pts_range)
     scat_p = struct;
-    scat_p.p_trajectory = zeros([3 length(shifts)]); % [x, z, ampl]
-    scat_p.beam_trajectory = zeros([3 length(shifts)]); % [angle, radius, ampl]
+    scat_p.p_trajectory = zeros([3 length(thetas)]); % [x, z, ampl]
+    scat_p.beam_trajectory = zeros([3 length(thetas)]); % [angle, radius, ampl]
     % Scatterer point and beam trajectories
     if mainP.shift_per_beam
         for s=1:length(shifts)

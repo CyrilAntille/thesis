@@ -1,20 +1,19 @@
 %% 2.1: Motion between frames
-% clear all
+clear all
 % clearvars -except mainP
 if ~exist('mainP', 'var')
     mainP = MainParameters();
     mainP.pts_range = [40];
     mainP.pts_azimuth = [0];
-    mainP.num_beams = 61;
+    mainP.num_beams = 31;
     mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
     mainP.shift_per_beam = false;
-    mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
+%     mainP.shift = Shift(ShiftType.RadialVar, 1/8, 8, 0, 1); % Ref Shift.m
+%     mainP.methods_set = {'DAS', 'IAA-MBMB', 'IAA-MBMB-2', 'IAA-MBMB-4'};
     mainP.save_plots = true;
     mainP.speckle_load = false;
-    mainP.save_all_data = false;
-    mainP.normalize_bfim = false;
-    mainP.norm_variant = 1;
-    mainP.interp_upsample = 0;
+    mainP.speckle_file = '..\data\2_1_speckle_2_10-6.mat';
+    mainP.NoMLA = 1;
 
     if mainP.shift.type == ShiftType.RadialVar || ...
             mainP.shift.type == ShiftType.RadialCst
@@ -24,18 +23,16 @@ if ~exist('mainP', 'var')
             cos(sin(mainP.pts_azimuth./mainP.pts_range));
     end
 end
-mainP.P = mainP.copyP(mainP.num_beams);
+mainP.P = mainP.copyP(mainP.num_beams, mainP.NoMLA);
 mainP = mainP.createOutputDir();
 
 %% Max loss vs beams
-num_beams = 11:10:71;
-% num_beams = [0, 61, 200, 600, 1000, 2000]; % Test with varying upsample
-% mainP.interp_method = 'cubic'; % nearest, linear, cubic, spline
+% num_beams = horzcat(15:4:103, 111:4:127);
+num_beams = 851:100:1051;
 pts_gain = zeros(length(mainP.pts_range), length(mainP.methods_set), ...
     length(num_beams), mainP.shift.num_shifts);
 for b=1:length(num_beams)
     mainP.num_beams = num_beams(b);
-%     mainP.interp_upsample = num_beams(b); % Test with varying upsample
     fprintf('Main_2_1_3: Beams number: %d\n', num_beams(b));
     mainP.P = mainP.copyP(mainP.num_beams);
     main_init
@@ -46,8 +43,14 @@ for b=1:length(num_beams)
             end
         end
     end
+    scallop_loss = zeros(length(mainP.methods_set), length(num_beams));
+    for m=1:length(mainP.methods_set)
+        scallop_loss(m,b) = max(pts_gain(p, m, b, :)) - ...
+            min(pts_gain(p, m, b, :));
+    end
+    scallop_loss(:,b)
 %     plotBFImages(mainP, data_DA, data_BF)
-    clearvars -except mainP num_beams pts_gain
+    clearvars -except mainP num_beams pts_gain test
 end
 
 %% Plots

@@ -1,16 +1,13 @@
 %% 2.1: Motion between frames - max scalloping loss vs range
 clear all
 mainP = MainParameters();
-mainP.num_beams = 35;
-mainP.shift = Shift(ShiftType.RadialVar, 1/2, 4, 0, 1); % Ref Shift.m
+mainP.num_beams = 31;
+mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
-mainP.methods_set = {'DAS','MV','IAA-MBSB','IAA-MBMB'};
+% mainP.shift = Shift(ShiftType.RadialVar, 1/8, 8, 0, 1); % Ref Shift.m
+% mainP.methods_set = {'DAS', 'IAA-MBMB', 'IAA-MBMB-2', 'IAA-MBMB-4'};
 mainP.save_plots = true;
 mainP.speckle_load = false;
-mainP.save_all_data = false;
-mainP.normalize_bfim = false;
-mainP.norm_variant = 1;
-mainP.interp_upsample = 0;
 
 if mainP.shift.type == ShiftType.RadialVar || ...
         mainP.shift.type == ShiftType.RadialCst
@@ -27,7 +24,7 @@ pts_range = 36:2:58;
 mainP.pts_azimuth = [0];
 
 max_loss = zeros(length(pts_range), length(mainP.methods_set));
-for p=1:length(pts_range)
+for p=6:length(pts_range)
     mainP.pts_range = [pts_range(p)];
     fprintf('Main_2_1_2: Point range: %d\n', mainP.pts_range(1));
     mainP.files_prefix = strcat(int2str(mainP.pts_range(1)), 'mm_');
@@ -74,6 +71,35 @@ if mainP.save_plots
     mainP.files_prefix = prefix;
     save(strcat(mainP.save_folder, mainP.files_prefix, ...
         'results_2_1_2.mat'), 'pts_range', 'max_loss', '-v7.3')
+else
+    pause;
+end
+close;
+%%
+if mainP.save_plots
+    figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+else
+    figure;
+end
+for m=1:length(mainP.methods_set)
+    max_loss(:,m) = max_loss(:,m) - max(max_loss(:,m));
+end
+pl = plot(pts_range, max_loss, 'LineWidth', 2);
+for pidx=1:length(pl)
+    pl(pidx).Marker = markers_list{pidx};
+    pl(pidx).LineStyle = linestyle_list{pidx};
+    pl(pidx).Color = colors_list{pidx};
+end
+grid on;
+legend(mainP.methods_set, 'Location', 'best');
+ylabel('Max scalloping loss difference [dB]');
+xlabel('Scatterer point radius [mm]');
+if mainP.save_plots
+    prefix = mainP.files_prefix;
+    mainP.files_prefix = strcat('scallop_vs_range_diff_', mainP.files_prefix);
+    saveas(gcf, mainP.outputFileName('png'), 'png')
+    saveas(gcf, mainP.outputFileName('fig'), 'fig')
+    mainP.files_prefix = prefix;
 else
     pause;
 end

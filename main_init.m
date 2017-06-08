@@ -3,8 +3,6 @@ addpath ../Field_II_ver_3_24/ -end
 
 if ~exist('mainP', 'var')
     mainP = MainParameters();
-%     mainP.speckle_create = true;
-%     mainP.speckle_seed = 42;
 end
 
 %% 1. FieldII initialization and Speckle raw data creation
@@ -177,7 +175,7 @@ if true
 %                 norm_info(2) = max(m_BF(:)) - norm_info(1); % dB
             end
             data_peaks{m} = computePeaksInfo(mainP, data_phantom, ...
-                data_DA.Radius, m_BF);
+                data_DA.Radius, m_BF, mainP.methods_set{m});
             data_BF{m} = m_BF;
         end
     else
@@ -205,8 +203,8 @@ if true
                     norm_info(2) = max(s_BF(:)) / norm_info(1);
 %                     norm_info(2) = max(s_BF(:)) - norm_info(1); % dB
                 end
-                data_peaks{m}{s} = computePeaksInfo(mainP, ...
-                    data_phantom{s}, data_DA{s}.Radius, s_BF);
+                data_peaks{m}{s} = computePeaksInfo(mainP, data_phantom{s},...
+                    data_DA{s}.Radius, s_BF, mainP.methods_set{m});
                 data_BF{m}{s} = s_BF;
             end
         end
