@@ -1,7 +1,7 @@
 %% 2.1: Motion between frames - max scalloping loss vs range
 clear all
 mainP = MainParameters();
-mainP.num_beams = 31;
+mainP.num_beams = 11;
 mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 % mainP.shift = Shift(ShiftType.RadialVar, 1/8, 8, 0, 1); % Ref Shift.m
@@ -24,8 +24,11 @@ pts_range = 36:2:58;
 mainP.pts_azimuth = [0];
 
 max_loss = zeros(length(pts_range), length(mainP.methods_set));
-for p=6:length(pts_range)
+for p=1:length(pts_range)
     mainP.pts_range = [pts_range(p)];
+    mainP.P.Tx.focus = [0 0 pts_range(p)]*1e-3; % Initial electonic focus
+    mainP.P.Rx.focus = [0 0 pts_range(p)]*1e-3; % Initial electonic focus
+    mainP.P.Tx.FocRad = pts_range(p)*1e-3; % Focal radius
     fprintf('Main_2_1_2: Point range: %d\n', mainP.pts_range(1));
     mainP.files_prefix = strcat(int2str(mainP.pts_range(1)), 'mm_');
     main_init

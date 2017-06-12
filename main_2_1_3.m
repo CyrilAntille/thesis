@@ -1,19 +1,21 @@
 %% 2.1: Motion between frames
-clear all
-% clearvars -except mainP
+% clear all
+clearvars -except mainP num_beams
 if ~exist('mainP', 'var')
     mainP = MainParameters();
     mainP.pts_range = [40];
     mainP.pts_azimuth = [0];
     mainP.num_beams = 31;
-    mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
+    mainP.shift = Shift(ShiftType.RadialVar, 1/2, 4, 0, 1); % Ref Shift.m
     mainP.shift_per_beam = false;
 %     mainP.shift = Shift(ShiftType.RadialVar, 1/8, 8, 0, 1); % Ref Shift.m
 %     mainP.methods_set = {'DAS', 'IAA-MBMB', 'IAA-MBMB-2', 'IAA-MBMB-4'};
     mainP.save_plots = true;
-    mainP.speckle_load = false;
+    mainP.speckle_load = true;
     mainP.speckle_file = '..\data\2_1_speckle_2_10-6.mat';
     mainP.NoMLA = 1;
+%     num_beams=11:10:181
+    num_beams=181:100:981;
 
     if mainP.shift.type == ShiftType.RadialVar || ...
             mainP.shift.type == ShiftType.RadialCst
@@ -28,7 +30,7 @@ mainP = mainP.createOutputDir();
 
 %% Max loss vs beams
 % num_beams = horzcat(15:4:103, 111:4:127);
-num_beams = 851:100:1051;
+% num_beams = 851:100:1051;
 pts_gain = zeros(length(mainP.pts_range), length(mainP.methods_set), ...
     length(num_beams), mainP.shift.num_shifts);
 for b=1:length(num_beams)
@@ -50,7 +52,7 @@ for b=1:length(num_beams)
     end
     scallop_loss(:,b)
 %     plotBFImages(mainP, data_DA, data_BF)
-    clearvars -except mainP num_beams pts_gain test
+    clearvars -except mainP num_beams pts_gain
 end
 
 %% Plots

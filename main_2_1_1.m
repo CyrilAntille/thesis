@@ -1,15 +1,18 @@
 %% 2.1: Motion between frames - loss vs shift
 clear all
 mainP = MainParameters();
-mainP.pts_range = [55];
-mainP.pts_azimuth = [0];
-mainP.num_beams = 31;
+mainP.num_beams = 11;
+mainP.pts_range = [40, 55];
+% dist_b = 0.3 * mainP.pts_range ./ floor(mainP.num_beams/2);
+% mainP.pts_azimuth = dist_b .* 0.5;
+mainP.pts_azimuth = [0, 0];
 mainP.NoMLA = 1;
 mainP.shift = Shift(ShiftType.RadialVar, 1/8, 17, 0, 1); % Ref Shift.m
 mainP.shift_per_beam = false;
 % mainP.methods_set = {'DAS', 'IAA-MBMB', 'IAA-MBMB-2', 'IAA-MBMB-4'};
 mainP.save_plots = true;
-mainP.speckle_load = false;
+mainP.speckle_load = true;
+mainP.speckle_file = '..\data\2_1_speckle_2_10-6.mat';
 
 if mainP.shift.type == ShiftType.RadialVar || ...
         mainP.shift.type == ShiftType.RadialCst
@@ -94,7 +97,7 @@ for p=1:length(mainP.pts_range)
             'Color', colors_list{mod(length(pl), length(colors_list))+1});
         s = s + 1;
     end
-    legend([mainP.methods_set, 'Transmitted beams'], 'Location', 'best');
+    legend([mainP.methods_set, 'Transmitted beams'], 'Location', 'South');
     ylabel('Scatterer point gain [dB]');
     xlabel('Shift [ratio beams separation]');
 %     t = strcat('Scatterer point at ', num2str(mainP.pts_range(p),0), 'mm range, ');
@@ -108,7 +111,7 @@ for p=1:length(mainP.pts_range)
         saveas(gcf, mainP.outputFileName('fig'), 'fig')
         mainP.files_prefix = prefix;
         save(strcat(mainP.save_folder, mainP.files_prefix, ...
-            'results_2_1_1.mat'), 'pts_gain', '-v7.3')
+            'results_2_1_1.mat'), 'pts_gain', 'data_peaks', '-v7.3')
     else
         pause
     end

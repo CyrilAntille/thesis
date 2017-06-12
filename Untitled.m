@@ -227,17 +227,24 @@ figure; plot(f, db_onesided)
 % k = 4*pi * 0.3
 
 %% heavy computation
+% clear all
+% main_2_1_3
+% clearvars -except mainP
+% mainP.speckle_file = '..\data\2_1_speckle_2_10-6.mat';
+% main_2_1_3
 clear all
 % num_beams = [65, 141, 145, 951];
-num_beams = [951];
+num_beams = [65];
 % num_beams_speckle = [75, 91, 101, 301];
 
 mainP = MainParameters();
 mainP.pts_range = [40];
 mainP.pts_azimuth = [0];
+mainP.NoMLA = 1;
 mainP.shift_per_beam = true;
 mainP.speckle_load = false;
-mainP.speckle_file = '..\data\2_1_speckle_42_10-6.mat';
+% mainP.speckle_file = '..\data\2_1_speckle_42_10-6.mat';
+% mainP.methods_set = {'DAS', 'IAA-MBMB', 'IAA-MBMB-2', 'IAA-MBMB-4'};
 mainP.save_plots = true;
 mainP = mainP.createOutputDir();
 origin_folder = mainP.save_folder;
@@ -272,8 +279,10 @@ end
 fprintf('\n-------------------------------------------- 2.1.2 finished! ----------------------------------------------------------------\n')
 
 % 2.2.1: Two points linear velocity
+% mainP.speckle_load = true;
 mainP.pts_range = [40, 40];
-mainP.pts_azimuth = [0, 1];
+img_azimuth_length = 2 * tan(asin(0.3)) * mainP.pts_range(1);
+mainP.pts_azimuth = [0, 2.5*img_azimuth_length/65];
 for b=1:length(num_beams)
     mainP.num_beams = num_beams(b);
     mainP.P = mainP.copyP(mainP.num_beams);
@@ -285,8 +294,9 @@ for b=1:length(num_beams)
 end
 fprintf('\n-------------------------------------------- 2.2.1 finished! ----------------------------------------------------------------\n')
 
-%% 2.2.2: Two points various motion directions
+% 2.2.2: Two points various motion directions
 directions = [-45, 45, 90];
+% directions = [45, 90];
 for b=1:length(num_beams)
     for d=1:length(directions)
         mainP.num_beams = num_beams(b);
@@ -348,3 +358,305 @@ for f=1:length(scenario_folder)
     end
 end
 num_beams = cat(2, 11:10:151, 251:100:951);
+
+
+%% stats_2_2 num beams
+mainP = MainParameters();
+mainP.pts_range = [40, 40]; % Add a range (in mm) for each point
+mainP.pts_azimuth = [0, 2*25.16/65];
+mainP.num_beams = 65;
+mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 1);
+mainP.shift_per_beam = true;
+mainP.save_plots = true;
+mainP.speckle_load = false;
+mainP.normalize_bfim = true;
+mainP.norm_variant = 2;
+mainP = mainP.createOutputDir();
+orig_folder = mainP.save_folder;
+
+num_beams = [141, 145, 951];
+for b=1:length(num_beams)
+    mainP.num_beams = num_beams(b);
+    fprintf('moving_2_2: Running main_2_2 with %d beams.\n',num_beams(b));
+%     pts_dist = 2 * 25.16 / mainP.num_beams;
+%     mainP.pts_azimuth = [0, pts_dist];
+    mainP.P = mainP.copyP(mainP.num_beams);
+    mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 1);
+    mainP.save_folder = orig_folder;
+    mainP = mainP.createOutputDir();
+    main_2_2
+    clearvars -except mainP b num_beams orig_folder
+end
+
+%% stats_2_2 points dist
+mainP = MainParameters();
+mainP.pts_range = [40, 40]; % Add a range (in mm) for each point
+mainP.num_beams = 145;
+pts_dist = 2*25.16/mainP.num_beams;
+mainP.pts_azimuth = [0, pts_dist];
+mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 1);
+mainP.shift_per_beam = true;
+mainP.save_plots = true;
+mainP.speckle_load = false;
+mainP.normalize_bfim = true;
+mainP.norm_variant = 2;
+mainP.P = mainP.copyP(mainP.num_beams);
+mainP = mainP.createOutputDir();
+orig_folder = mainP.save_folder;
+
+speeds = -0.5:1/8:0.5;
+for s=1:length(speeds)
+    fprintf('Stats_2_2: Running main_2_2 with speed value: %0.2f.\n', speeds(s));
+    pts_shift = speeds(s) * 0.4; % 0.4 ms = 1/2 + 1 + 1/2 beam acqu. time
+    diff_beams = 2;
+    while abs(pts_shift) >= pts_dist / 2 % -> different 'main' beam
+        diff_beams = diff_beams + sign(pts_shift);
+        pts_shift = speeds(s) * diff_beams;
+    end
+    mainP.pts_azimuth = [0, pts_dist + pts_shift];
+    fprintf('Diff beams: %d, pts dist: %0.3f mm\n', diff_beams, pts_dist + pts_shift)
+    mainP.save_folder = orig_folder;
+    mainP = mainP.createOutputDir();
+    main_2_2
+    clearvars -except mainP b speeds orig_folder pts_dist
+end
+
+%% Result - first illustration
+mainP = MainParameters();
+mainP.pts_range = [40, 50];
+mainP.pts_azimuth = [0, 0];
+mainP.num_beams = 15;
+mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 1);
+mainP.shift_per_beam = true;
+mainP.speckle_load = true;
+mainP.pts_gain = 0;
+
+mainP.save_plots = false;
+mainP.P = mainP.copyP(mainP.num_beams);
+mainP = mainP.createOutputDir();
+
+main_init
+mainP.shift = Shift(ShiftType.RadialVar, 1/8, 17, 0, 1);
+plotBFImages(mainP, data_DA, data_BF)
+
+%%
+speeds = [-0.5, 0, 0.5];
+speed_BF = cell([1, length(speeds)]);
+speed_mainP = cell([1, length(speeds)]);
+for sp=1:length(speeds)
+    clearvars -except mainP speed_BF speed_mainP speeds sp
+    mainP.shift.val = speeds(sp);
+    main_init
+    speed_BF{sp} = data_BF;
+    speed_mainP{sp} = copyStruct(mainP);
+end
+%%
+if mainP.save_plots
+    figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+else
+    figure;
+end
+m = 1;
+for sp=1:length(speeds)
+    m_BF = speed_BF{sp}{m};
+    s_mainP = speed_mainP{sp};
+    m_P = s_mainP.P;
+    thetas = s_mainP.getScanGrid(s_mainP.methods_set{m});
+    radius = data_DA.Radius;
+%     if mainP.interp_upsample > 0
+%         radius = linspace(radius(1), radius(end), mainP.interp_upsample);
+%     end
+    warning('off')
+%     [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
+%         thetas, 1e3 * radius, length(thetas), length(radius), 'spline'); % Test
+    [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
+        thetas, 1e3 * radius, 2024, 2024, 'spline');
+    warning('on')
+    img = db(abs(img));
+    
+    shifts = s_mainP.shift.getShifts(s_mainP.P);
+    shifts = interp1(1:length(shifts), shifts, ...
+        linspace(1, length(shifts), length(thetas)));
+    max_gain = max(img(:));
+    az_lim = [NaN, -NaN];
+    r_lim = [NaN, -NaN];
+    for p=1:length(s_mainP.pts_range)
+        for t=1:length(thetas)
+            s_phantom = s_mainP.shift.shiftPositions(data_phantom, shifts(t));
+            p_size = 0.1; %mm
+            
+            beam_az = atan(thetas(t)) * s_phantom.positions(p, 3)*1e3;
+            pos_az = s_phantom.positions(p, 1)*1e3;
+            pos_r = s_phantom.positions(p, 3)*1e3;
+            s_az = find(abs(Xs - pos_az) < p_size, 10); % pos azimuth
+%             s_az = find(abs(Xs - beam_az) < p_size, 10); % beam azimuth
+            s_r = find(abs(Zs - pos_r) < p_size, 10);
+            if ~isempty(s_r) && ~isempty(s_az) && abs(beam_az - pos_az) < 1
+                % Create circle mask (instead of square)
+%                 p_r = s_r * ones(1, length(s_az));
+%                 p_az = s_az * ones(1, length(s_r));
+%                 img_circle = zeros(size(img));
+%                 p_circle = (p_r-mean(s_r)).^2 + (p_az'-mean(s_az)).^2 <= 10;
+%                 img(s_r, s_az) = p_circle * (max_gain + 3) + ...
+%                      abs(p_circle - 1).*img(s_r, s_az);
+%                 img(s_r, s_az) = max_gain + 3; % square mask
+                az_lim = [min(az_lim(1), pos_az - p_size), ...
+                    max(az_lim(2), pos_az + p_size)];
+                r_lim = [min(r_lim(1), pos_r - p_size), ...
+                    max(r_lim(2), pos_r + p_size)];
+            end
+        end
+    end
+    pad = 0.5; % padding in mm
+%     az_lim = [max(Xs(1), az_lim(1) - pad), min(Xs(end), az_lim(2) + pad)];
+    az_lim = [-1, 1];
+    r_lim = [max(Zs(1), r_lim(1) - pad), min(Zs(end), r_lim(2) + pad)];
+    minXs = find(Xs >= az_lim(1), 1);
+    maxXs = find(Xs >= az_lim(2), 1);
+    pXs = Xs(minXs:maxXs);
+    minZs = find(Zs >= r_lim(1), 1);
+    maxZs = find(Zs >= r_lim(end), 1);
+    pZs = Zs(minZs:maxZs);
+    p_img = img(minZs:maxZs, minXs:maxXs);
+    p_img(~isfinite(p_img)) = -1000; % contourf doesn't handle non-finite values
+%     [xGrid, zGrid] = meshgrid(linspace(pXs(1), pXs(end), 2024), ...
+%         linspace(pZs(1), pZs(end), 2024));
+    [xGrid, zGrid] = meshgrid(linspace(pXs(1), pXs(end), max([500, length(pXs)])), ...
+        linspace(pZs(1), pZs(end), length(pZs)));
+	p_img = interp2(pXs, pZs, p_img, xGrid, zGrid, 'spline', 0);
+%     subplot(2,ceil(length(mainP.methods_set)/2),m);
+    subplot(1, length(speeds), sp)
+%     contourf(pXs, pZs, p_img, [-1000, max_gain-10, max_gain + 3], 'ShowText','on');
+    contourf(xGrid, zGrid, p_img, [max_gain-50, max_gain-10, max_gain-3, max_gain + 3], 'ShowText','on');
+    colormap gray
+    set(gca,'YDir','Reverse')
+    xlabel('azimuth [mm]');
+    ylabel('range [mm]');
+    title(strcat('v=', num2str(speeds(sp),2), ' m/s'));
+end
+if mainP.save_plots
+    saveas(gcf,  mainP.outputFileName('png'), 'png')
+    saveas(gcf, mainP.outputFileName('fig'), 'fig')
+else
+    pause
+end
+close
+fprintf('DAS illustation finished!\n')
+
+%% Beampattern transmission - steered response reception
+clearvars -except all_peaks
+mainP = MainParameters();
+mainP.num_beams = 75;
+mainP.medium_range = [35, 45];
+mainP.P = mainP.copyP(mainP.num_beams);
+mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 1);
+mainP.shift_per_beam = true;
+mainP.save_plots = false;
+mainP.speckle_load = false;
+
+% mainP.pts_azimuth = mainP.P.Tx.SinTheta .* 40;
+% mainP.pts_range = cos(mainP.P.Tx.Theta) .* 40;
+center_idx = ceil(length(mainP.P.Tx.Theta)/2) + 2;
+% center_idx = center_idx-1:center_idx+1;
+% center_idx = [center_idx, ceil(2*center_idx / 3)];
+mainP.pts_azimuth = mainP.P.Tx.SinTheta(center_idx) .* 40;
+mainP.pts_range = cos(mainP.P.Tx.Theta(center_idx)) .* 40;
+
+az_val = mainP.P.Tx.SinTheta(center_idx+1) - mainP.P.Tx.SinTheta(center_idx);
+mainP.pts_azimuth = mainP.P.Tx.SinTheta(center_idx) + az_val/2;
+z_val = cos(mainP.P.Tx.Theta(center_idx+1)) - cos(mainP.P.Tx.Theta(center_idx));
+mainP.pts_range = cos(mainP.P.Tx.Theta(center_idx)) + z_val/2;
+mainP = mainP.createOutputDir();
+
+main_init
+%%
+%plotBFImages(mainP, data_DA, data_BF)
+for m=1:length(mainP.methods_set)
+    figure;
+    for p=1:length(mainP.pts_range)
+        plot(data_peaks{m}{p}.beam_trajectory(1,:), ...
+            data_peaks{m}{p}.beam_trajectory(3,:)); hold on
+    end
+    hold off; pause; close
+end
+
+%% Illustration interference
+c = 1; % m/s
+A = 1;
+omega = 2 * pi;
+D = 5; % m
+k1 = sqrt(omega^2 / c^2);
+k2 = - k1;
+
+t = 1:1/4:10; % s
+x = 0;
+% x = 0:1/10:D; % m
+
+s1 = A * exp(1i*omega*t - k1 * x);
+s2 = A * exp(1i*omega*t - k2 * (x - D));
+
+figure;
+plot(x, real(s1), 'b')
+plot(x, real(s2), 'r')
+
+%%
+linestyle_list = {'-.','--','-',':'};
+markers_list = {'+','x','diamond','o'};
+colors_list = {'b','r','g','k','m','y'};
+save_folder = '..\images\may\extra\steered\40mm\';
+
+for s=1:length(data_peaks{1})
+    figure;
+    for m=1:length(data_peaks)
+        s_resp = data_peaks{m}{s}.beam_trajectory;
+        s_resp(3,:) = s_resp(3,:) - max(s_resp(3,:));
+        s_resp(1,:) = sin(s_resp(1,:)) * mainP.pts_range(1);
+        plot(s_resp(1,:), s_resp(3,:), colors_list{m}, 'LineWidth', 2, ...
+            'LineStyle', linestyle_list{m}, 'Marker', markers_list{m});
+        hold on;
+    end
+    az = mainP.pts_azimuth(1);
+    line('XData', [az az], 'YData', ylim, 'LineWidth', 2, ...
+        'LineStyle', linestyle_list{2}, 'Color', colors_list{m+1});
+    xlabel('Azimuth [mm]'); ylabel('Steered response gain [dB]');
+    xlim([az-1, az+1]);
+%     ylim([-80, -50]);
+    ylim([-10, 0]);
+    legend(horzcat(mainP.methods_set, 'Scatterer point azimuth'), ...
+       'Location', 'South');
+%     save(horzcat(save_folder, 'data_between.mat'), 'mainP', 'data_peaks', '-v7.3')
+    saveas(gcf, horzcat(save_folder, 'steered_aligned_norm_40mm.fig'), 'fig')
+    saveas(gcf, horzcat(save_folder, 'steered_aligned_norm_40mm.png'), 'png')
+    hold off; pause; close
+end
+
+%%
+clear all
+mainP = MainParameters();
+mainP.P.Tx.focus       = [0 0 80]*1e-3;         % Initial electonic focus
+mainP.P.Rx.focus       = [0 0 80]*1e-3;         % Initial electonic focus
+mainP.P.Tx.FocRad   = 80e-3;    % Focal radius
+mainP.P.MinRadImage = 70e-3;     % Minimum radius for which data is recorded [m]
+mainP.medium_range = [70, 90]; % mm
+
+mainP.num_beams = 21;
+mainP.pts_range = [80];
+% dist_b = 0.3 * mainP.pts_range ./ floor(mainP.num_beams/2);
+% mainP.pts_azimuth = dist_b .* 0.5;
+mainP.pts_azimuth = [0];
+mainP.NoMLA = 1;
+mainP.shift = Shift(ShiftType.RadialVar, 1/8, 17, 0, 1); % Ref Shift.m
+mainP.shift_per_beam = false;
+% mainP.methods_set = {'DAS', 'IAA-MBMB', 'IAA-MBMB-2', 'IAA-MBMB-4'};
+mainP.save_plots = true;
+mainP.speckle_load = false;
+
+if mainP.shift.type == ShiftType.RadialVar || ...
+        mainP.shift.type == ShiftType.RadialCst
+    % This allows to set mainP.pts_range above as radius instead.
+    % This step transforms radiuses to ranges.
+    mainP.pts_range = mainP.pts_range.*...
+        cos(sin(mainP.pts_azimuth./mainP.pts_range));
+end
+mainP.P = mainP.copyP(mainP.num_beams, mainP.NoMLA);
+mainP = mainP.createOutputDir();

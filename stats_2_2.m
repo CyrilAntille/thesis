@@ -3,14 +3,16 @@
 % clearvars -except mainP
 if ~exist('mainP', 'var')
     mainP = MainParameters();
-    mainP.pts_range = [40]; % Add a range (in mm) for each point
-    mainP.pts_azimuth = [0]; % Add a range (in mm) for each point
-    mainP.num_beams = 141;
-    % mainP.shift = Shift(ShiftType.RadialVar, 0,  mainP.num_beams, 0, 1);
-    mainP.shift = Shift(ShiftType.LinearSpeed, 0,  mainP.num_beams, 0, 1);
+    mainP.num_beams = 981;
+    mainP.pts_range = [40];
+    mainP.pts_azimuth = [0];
+%     mainP.pts_range = [40, 40]; % Add a range (in mm) for each point
+%     distb = mainP.pts_range(1) .* (0.3 / floor(mainP.num_beams/2));
+%     mainP.pts_azimuth = [0, 2.5*distb];
+    mainP.P = mainP.copyP(mainP.num_beams);
+    mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 1);
     mainP.shift_per_beam = true;
     mainP.speckle_load = false;
-    % mainP.interp_upsample = 1300;
     mainP.speckle_file = '..\data\2_1_speckle_42_10-6.mat';
 
     if (mainP.shift.type == ShiftType.RadialVar || ...
@@ -20,17 +22,15 @@ if ~exist('mainP', 'var')
         mainP.pts_range = mainP.pts_range.*...
             cos(sin(mainP.pts_azimuth./mainP.pts_range));
     end
-else
-%     mainP.save_folder = '../output/';
-%     mainP.shift = Shift(ShiftType.LinearSpeed, 0,  mainP.num_beams, 0, 1);
-%     mainP.save_plots = true;
-%     mainP.P = mainP.copyP(mainP.num_beams);
-%     mainP = mainP.createOutputDir();
+    mainP.save_plots = true;
+    mainP = mainP.createOutputDir();
+    
+    speeds = -0.6:0.1:0.6; % Unit depends on ShiftType
+    % speeds = 0:1/16:0.5; % Unit depends on ShiftType
+    % speeds = [-0.5, 0.5]; % Unit depends on ShiftType
 end
 
-
 %%
-speeds = -0.5:1/8:0.5; % Unit depends on ShiftType
 pts_3dB_width = zeros([length(mainP.pts_range),...
     length(mainP.methods_set), length(speeds)]);
 for sp=1:length(speeds)
@@ -52,8 +52,9 @@ fprintf('\nNSaving speed  data  into: %s\n', mainP.outputFileName('mat'))
 save(mainP.outputFileName('mat'), 'mainP', 'pts_3dB_width', 'speeds', '-v7.3')
 
 %% Plots
-linestyle_list = {':','-','--','-.','-'};
+linestyle_list = {'-.','--','-',':','-'};
 markers_list = {'+','x','diamond','o','*'};
+% colors_list = {'b','r','g','k','m','y'};
 
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
@@ -67,11 +68,11 @@ for p=1:size(pts_3dB_width, 1)
         p1(pidx).Marker = markers_list{pidx};
         p1(pidx).LineStyle = linestyle_list{pidx};
     end
-    legend(mainP.methods_set, 'Location', 'best')
-    title('Beampattern mainlobes 3dB width')
+    legend(mainP.methods_set, 'Location', 'NW', 'FontSize', 14)
+%     title('Steered response mainlobes 3dB width', 'FontSize', 24)
     x_unit = ShiftType.getShiftTypeUnit(mainP.shift.type);
-    xlabel(strcat('Velocity [', x_unit, ']'))
-    ylabel('Mainlobe 3dB width [degrees]')
+    xlabel(strcat('Velocity [', x_unit, ']'), 'FontSize', 14)
+    ylabel('Mainlobe 3dB width [degrees]', 'FontSize', 14)
     if mainP.save_plots
         mainP.files_prefix = strcat('speeds_p', int2str(p), '_');
         saveas(gcf, mainP.outputFileName('png'), 'png')
@@ -106,11 +107,11 @@ for p=1:size(pts_3dB_width, 1)
         p1(pidx).Marker = markers_list{pidx};
         p1(pidx).LineStyle = linestyle_list{pidx};
     end
-    legend(mainP.methods_set, 'Location', 'best')
-    title('Beampattern mainlobes 3dB relative width')
+    legend(mainP.methods_set, 'Location', 'NW', 'FontSize', 14)
+%     title('Steered response mainlobes 3dB relative width')
     x_unit = ShiftType.getShiftTypeUnit(mainP.shift.type);
-    xlabel(strcat('Velocity [', x_unit, ']'))
-    ylabel('Mainlobe 3dB width increase [%]')
+    xlabel(strcat('Velocity [', x_unit, ']'), 'FontSize', 14)
+    ylabel('Mainlobe 3dB width increase [%]', 'FontSize', 14)
     if mainP.save_plots
         mainP.files_prefix = strcat('speeds_p', int2str(p), '_relative_');
         saveas(gcf, mainP.outputFileName('png'), 'png')

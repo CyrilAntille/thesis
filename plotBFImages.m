@@ -27,11 +27,12 @@ for m=1:length(mainP.methods_set)
         warning('on')
         img = db(abs(scanConvertedImage));
         maxim = max(img(:));
+%         maxim = -50;
         color_range = [maxim-50, maxim];
         
-        display_beams = true;
+        display_beams = false;
         if display_beams
-            maxim = -40;
+%             maxim = maxim+100;
             for t=1:length(mainP.P.Tx.Theta)
                 x = Zs .* tan(mainP.P.Tx.Theta(t));
                 for zidx=1:length(Zs)
@@ -117,6 +118,49 @@ for m=1:length(mainP.methods_set)
         colormap(gray)
         ylabel('range [mm]');
         caxis(color_range)
+        
+        if display_beams
+            linestyle_list = {'-',':','-.','-.','-'};
+            colors_list = {'b','r','g','m','c'};
+            norm_diag = norm([0.5, 0.5]);
+            vs = [0.5, 0; [-0.5, 0.5]./norm_diag./2; [-0.5, -0.5]./norm_diag./2];
+            vs_x = Xs(find(abs(Xs - 0) < 0.01, 1)); 
+            vs_y = Zs(find(abs(Zs - 45) < 0.01, 1));
+            hold on;
+            qlgd = cell([1 size(vs,1)+2]);
+            for v=1:size(vs,1)
+                quiver(vs_x, vs_y, vs(v,1), vs(v,2), 4, 'LineWidth', 5, ...
+                    'MaxHeadSize', 5, 'LineStyle', linestyle_list{v}, ...
+                    'Color', colors_list{v});
+                qlgd{v} = horzcat('   v_s = (', num2str(vs(v,1),2), ',', ...
+                    num2str(vs(v,2),2), ') m/s');
+            end
+
+            vtr_40 = [12, 0];
+            vtr_40_y = Zs(find(abs(Zs - 40) < 0.01, 1));
+            quiver(vs_x, vtr_40_y, vtr_40(1), vtr_40(2), 0.5, 'LineWidth', 5, ...
+                'MaxHeadSize', 5, 'LineStyle', linestyle_list{v+1}, ...
+                'Color', colors_list{v+1});
+            qlgd{v+1} = horzcat('   v_{tr} = (', num2str(vtr_40(1),3), ',', ...
+                num2str(vtr_40(2),2), ') m/s');
+
+            vtr_55 = [16.5, 0];
+            vtr_55_y = Zs(find(abs(Zs - 55) < 0.01, 1));
+            quiver(vs_x, vtr_55_y, vtr_55(1), vtr_55(2), 0.5, 'LineWidth', 5, ...
+                'MaxHeadSize', 5, 'LineStyle', linestyle_list{v+2}, ...
+                'Color', colors_list{v+2});
+            qlgd{v+2} = horzcat('   v_{tr} = (', num2str(vtr_55(1),3), ',', ...
+                num2str(vtr_55(2),2), ') m/s');
+
+            quiver(Xs(50), Zs(50), 5, 0, 'Color', 'w', 'LineWidth', 5)
+            quiver(Xs(50), Zs(50), 0, 5, 'Color', 'w', 'LineWidth', 5)
+    %         qlgd{end+1} = 'X'; qlgd{end+1} = 'Y';
+            text(Xs(50)+5, Zs(50)+0.5, 'X', 'FontSize', 18, ...
+                'FontWeight', 'bold', 'Color', 'w');
+            text(Xs(50)+0.5, Zs(50)+5, 'Y', 'FontSize', 18,  ...
+                'FontWeight', 'bold', 'Color', 'w');
+            hold off; legend(qlgd, 'FontSize', 12);
+        end
         
         im_title = strcat('Method : ', mainP.methods_set{m});
         if mainP.shift_per_beam
