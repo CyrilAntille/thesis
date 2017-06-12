@@ -31,7 +31,7 @@ elseif strfind(bf_method, 'MV-')
 elseif strfind(bf_method, 'IAA-MBSB')
     [IAAImageAmp, IAAImagePow] = getIAAMultiBeam(dataCube,0,0,V, ...
         mainP.P.Rx.Theta,scanGridTheta,pitchInLambdas,1,10,1,verbose,0);
-    bf_im = sqrt(IAAImagePow(:,:,10));
+    bf_im = sqrt(IAAImageAmp(:,:,10));
 elseif strfind(bf_method, 'IAA-MBMB')
     [IAAImageAmp, IAAImagePow] = getIAAMultiBeam(dataCube,0,0,V, ...
         mainP.P.Rx.Theta,scanGridTheta,pitchInLambdas,1,10,0,verbose,0);
