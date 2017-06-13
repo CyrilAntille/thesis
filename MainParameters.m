@@ -3,8 +3,8 @@ classdef MainParameters
     
     properties
         % Array and medium parameters
-        num_beams = 61;
-        P = Parameters(61); % Argument must match num_beams
+        num_beams = 65;
+        P = Parameters(65); % Argument must match num_beams
         % Note: If num_beams changed. must call copyP()
         medium_range = [35, 60] % mm
         % medium_range should start P.MinRadImage (35mm)

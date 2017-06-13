@@ -5,16 +5,15 @@ if ~exist('mainP', 'var')
     mainP = MainParameters();
     mainP.pts_range = [40];
     mainP.pts_azimuth = [0];
-    mainP.num_beams = 31;
     mainP.shift = Shift(ShiftType.RadialVar, 1/2, 4, 0, 1); % Ref Shift.m
     mainP.shift_per_beam = false;
 %     mainP.shift = Shift(ShiftType.RadialVar, 1/8, 8, 0, 1); % Ref Shift.m
 %     mainP.methods_set = {'DAS', 'IAA-MBMB', 'IAA-MBMB-2', 'IAA-MBMB-4'};
     mainP.save_plots = true;
-    mainP.speckle_load = true;
+    mainP.speckle_load = false;
     mainP.speckle_file = '..\data\2_1_speckle_2_10-6.mat';
     mainP.NoMLA = 1;
-%     num_beams=11:10:181
+%     num_beams=11:10:181;
     num_beams=181:100:981;
 
     if mainP.shift.type == ShiftType.RadialVar || ...
@@ -29,8 +28,6 @@ mainP.P = mainP.copyP(mainP.num_beams, mainP.NoMLA);
 mainP = mainP.createOutputDir();
 
 %% Max loss vs beams
-% num_beams = horzcat(15:4:103, 111:4:127);
-% num_beams = 851:100:1051;
 pts_gain = zeros(length(mainP.pts_range), length(mainP.methods_set), ...
     length(num_beams), mainP.shift.num_shifts);
 for b=1:length(num_beams)
@@ -54,10 +51,15 @@ for b=1:length(num_beams)
 %     plotBFImages(mainP, data_DA, data_BF)
     clearvars -except mainP num_beams pts_gain
 end
+if mainP.save_plots
+    save(strcat(mainP.save_folder, mainP.files_prefix, ...
+        'results_2_1_3.mat'), 'mainP', 'num_beams', 'pts_gain', '-v7.3')
+end
 
 %% Plots
-linestyle_list = {'-.','--','-',':'};
-markers_list = {'+','x','diamond','o'};
+linestyle_list = {'-','-.','--',':'};
+% markers_list = {'+','x','d','o','.','s','^','>','v','<'};
+markers_list = {'s','d','^','x'};
 colors_list = {'b','r','g','k','m','c'};
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
@@ -74,32 +76,28 @@ for p=1:length(mainP.pts_range)
                 min(pts_gain(p, m, b, :));
         end
     end
-    pl = plot(num_beams, scallop_loss', 'LineWidth', 2);
+    line('XData', [num_beams(1) num_beams(end)], 'YData', [1 1], ...
+        'LineWidth', 3, 'LineStyle', linestyle_list{1}, ...
+        'Color', colors_list{end});
+    hold on;
+    pl = plot(num_beams, scallop_loss', 'LineWidth', 3, 'MarkerSize', 8);
     for pidx=1:length(pl)
         pl(pidx).Marker = markers_list{pidx};
         pl(pidx).LineStyle = linestyle_list{pidx};
         pl(pidx).Color = colors_list{pidx};
     end
-    hold on;
-    clr_idx = length(pl) + 1;
-    line('XData', [num_beams(1) num_beams(end)], 'YData', [1 1], ...
-        'LineWidth', 2, 'LineStyle', linestyle_list{mod(clr_idx,length(linestyle_list))+1}, ...
-        'Color', colors_list{mod(clr_idx,length(colors_list))+1});
     hold off;
-    legend([mainP.methods_set '1dB threshold'], 'Location', 'best');
-    ylabel('Max scalloping loss [dB]');
-    xlabel('Number of transmitted beams');
+    legend(['1dB threshold', mainP.methods_set], 'Location', 'NE', 'FontSize', 14);
+    ylabel('Max scalloping loss [dB]', 'FontSize', 14);
+    xlabel('Number of transmitted beams', 'FontSize', 14);
     if length(num_beams) > 1
         xlim([num_beams(1) num_beams(end)]) 
     end
-%     ylim([0 4])
     if mainP.save_plots
         mainP.files_prefix = strcat('loss_beams_p', ...
             int2str(mainP.pts_range(p)), '_');
         saveas(gcf, mainP.outputFileName('png'), 'png')
         saveas(gcf, mainP.outputFileName('fig'), 'fig')
-%         save(strcat(mainP.save_folder, mainP.files_prefix, ...
-%             'results_2_1_3.mat'), 'num_beams', 'pts_gain', '-v7.3')
     else
         pause
     end
@@ -108,9 +106,6 @@ mainP.files_prefix = '';
 close
 
 %% Plots fit
-linestyle_list = {'-.','--','-',':'};
-markers_list = {'+','x','diamond','o'};
-colors_list = {'b','r','g','k','m','c'};
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
 else
@@ -181,9 +176,9 @@ for p=1:length(mainP.pts_range)
             int2str(mainP.pts_range(p)), '_');
         saveas(gcf, mainP.outputFileName('png'), 'png')
         saveas(gcf, mainP.outputFileName('fig'), 'fig')
-        save(strcat(mainP.save_folder, mainP.files_prefix, ...
-            'results_2_1_3.mat'), 'num_beams', 'pts_gain', ...
-            'loss_fit', 'x1db', 'mainP', '-v7.3')
+%         save(strcat(mainP.save_folder, mainP.files_prefix, ...
+%             'results_2_1_3.mat'), 'num_beams', 'pts_gain', ...
+%             'loss_fit', 'x1db', 'mainP', '-v7.3')
     else
         pause
     end

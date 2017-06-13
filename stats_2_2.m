@@ -52,8 +52,8 @@ fprintf('\nNSaving speed  data  into: %s\n', mainP.outputFileName('mat'))
 save(mainP.outputFileName('mat'), 'mainP', 'pts_3dB_width', 'speeds', '-v7.3')
 
 %% Plots
-linestyle_list = {'-.','--','-',':','-'};
-markers_list = {'+','x','diamond','o','*'};
+linestyle_list = {'-.','--','-',':','-', '-.','--','-',':','-'};
+markers_list = {'+','x','diamond','o','*', '+','x','diamond','o','*'};
 % colors_list = {'b','r','g','k','m','y'};
 
 if mainP.save_plots
@@ -63,7 +63,7 @@ else
 end
 
 for p=1:size(pts_3dB_width, 1)
-    p1 = plot(speeds, squeeze(pts_3dB_width(p,:,:))', 'LineWidth', 2);
+    p1 = plot(speeds, squeeze(pts_3dB_width(p,:,:))', 'LineWidth', 3, 'MarkerSize', 8);
     for pidx=1:length(p1)
         p1(pidx).Marker = markers_list{pidx};
         p1(pidx).LineStyle = linestyle_list{pidx};
@@ -77,8 +77,39 @@ for p=1:size(pts_3dB_width, 1)
         mainP.files_prefix = strcat('speeds_p', int2str(p), '_');
         saveas(gcf, mainP.outputFileName('png'), 'png')
         saveas(gcf, mainP.outputFileName('fig'), 'fig')
-        save(strcat(mainP.save_folder, mainP.files_prefix, ...
-            'results_stats_2_2.mat'), 'speeds', 'pts_3dB_width', '-v7.3')
+        mainP.files_prefix = '';
+    else
+        pause
+    end
+end
+close
+
+%%
+linestyle_list = {'-.','--','-',':','-', '-.','--','-',':','-'};
+markers_list = {'+','x','diamond','o','*', '+','x','diamond','o','*'};
+% colors_list = {'b','r','g','k','m','y'};
+
+if mainP.save_plots
+    figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+else
+    figure;
+end
+
+for p=1:size(pts_3dB_width, 1)
+    mainlobe_mm = sin(squeeze(pts_3dB_width(p,:,:))') .* mainP.pts_range(1);
+    p1 = plot(speeds, mainlobe_mm, 'LineWidth', 3, 'MarkerSize', 8);
+    for pidx=1:length(p1)
+        p1(pidx).Marker = markers_list{pidx};
+        p1(pidx).LineStyle = linestyle_list{pidx};
+    end
+    legend(mainP.methods_set, 'Location', 'NW', 'FontSize', 14)
+    x_unit = ShiftType.getShiftTypeUnit(mainP.shift.type);
+    xlabel(strcat('Velocity [', x_unit, ']'), 'FontSize', 14)
+    ylabel('Mainlobe 3dB width [mm]', 'FontSize', 14)
+    if mainP.save_plots
+        mainP.files_prefix = strcat('speeds_mm_p', int2str(p), '_');
+        saveas(gcf, mainP.outputFileName('png'), 'png')
+        saveas(gcf, mainP.outputFileName('fig'), 'fig')
         mainP.files_prefix = '';
     else
         pause

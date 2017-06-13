@@ -11,6 +11,9 @@ shifts = mainP.shift.getShifts(mainP.P);
 % Fits radius and thetas to image size
 radius = linspace(da_radius(1), da_radius(end), size(bf_im, 1));
 thetas = mainP.getScanGrid(bf_method);
+if mainP.shift_per_beam && length(thetas) ~= length(shifts)
+    shifts = linspace(shifts(1), shifts(end), length(thetas));
+end
 for p=1:length(mainP.pts_range)
     scat_p = struct;
     scat_p.p_trajectory = zeros([3 length(thetas)]); % [x, z, ampl]

@@ -1,5 +1,4 @@
 %% 2.1: Motion between frames - max scalloping loss vs range
-clear all
 mainP = MainParameters();
 mainP.num_beams = 11;
 mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
@@ -26,9 +25,9 @@ mainP.pts_azimuth = [0];
 max_loss = zeros(length(pts_range), length(mainP.methods_set));
 for p=1:length(pts_range)
     mainP.pts_range = [pts_range(p)];
-    mainP.P.Tx.focus = [0 0 pts_range(p)]*1e-3; % Initial electonic focus
-    mainP.P.Rx.focus = [0 0 pts_range(p)]*1e-3; % Initial electonic focus
-    mainP.P.Tx.FocRad = pts_range(p)*1e-3; % Focal radius
+%     mainP.P.Tx.focus = [0 0 pts_range(p)]*1e-3; % Initial electonic focus
+%     mainP.P.Rx.focus = [0 0 pts_range(p)]*1e-3; % Initial electonic focus
+%     mainP.P.Tx.FocRad = pts_range(p)*1e-3; % Focal radius
     fprintf('Main_2_1_2: Point range: %d\n', mainP.pts_range(1));
     mainP.files_prefix = strcat(int2str(mainP.pts_range(1)), 'mm_');
     main_init
@@ -45,10 +44,15 @@ for p=1:length(pts_range)
     clearvars -except mainP pts_range max_loss
 end
 mainP.files_prefix = '';
+if mainP.save_plots
+    save(strcat(mainP.save_folder, mainP.files_prefix, ...
+        'results_2_1_2.mat'), 'pts_range', 'max_loss', '-v7.3')
+end
 
 %% Plot
-linestyle_list = {'-.','--','-',':'};
-markers_list = {'+','x','diamond','o'};
+linestyle_list = {'-','-.','--',':'};
+% markers_list = {'+','x','d','o','.','s','^','>','v','<'};
+markers_list = {'s','d','^','x'};
 colors_list = {'b','r','g','k','m','c'};
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
@@ -56,24 +60,22 @@ else
     figure;
 end
 
-pl = plot(pts_range, max_loss, 'LineWidth', 2);
+pl = plot(pts_range, max_loss, 'LineWidth', 3, 'MarkerSize', 8);
 for pidx=1:length(pl)
     pl(pidx).Marker = markers_list{pidx};
     pl(pidx).LineStyle = linestyle_list{pidx};
     pl(pidx).Color = colors_list{pidx};
 end
-grid on;
-legend(mainP.methods_set, 'Location', 'best');
-ylabel('Max scalloping loss difference [dB]');
-xlabel('Scatterer point radius [mm]');
+% grid on;
+legend(mainP.methods_set, 'Location', 'SW', 'FontSize', 14);
+ylabel('Max scalloping loss difference [dB]', 'FontSize', 14);
+xlabel('Scatterer point radius [mm]', 'FontSize', 14);
 if mainP.save_plots
     prefix = mainP.files_prefix;
     mainP.files_prefix = strcat('scallop_vs_range_', mainP.files_prefix);
     saveas(gcf, mainP.outputFileName('png'), 'png')
     saveas(gcf, mainP.outputFileName('fig'), 'fig')
     mainP.files_prefix = prefix;
-    save(strcat(mainP.save_folder, mainP.files_prefix, ...
-        'results_2_1_2.mat'), 'pts_range', 'max_loss', '-v7.3')
 else
     pause;
 end
@@ -87,16 +89,16 @@ end
 for m=1:length(mainP.methods_set)
     max_loss(:,m) = max_loss(:,m) - max(max_loss(:,m));
 end
-pl = plot(pts_range, max_loss, 'LineWidth', 2);
+pl = plot(pts_range, max_loss, 'LineWidth', 3, 'MarkerSize', 8);
 for pidx=1:length(pl)
     pl(pidx).Marker = markers_list{pidx};
     pl(pidx).LineStyle = linestyle_list{pidx};
     pl(pidx).Color = colors_list{pidx};
 end
-grid on;
-legend(mainP.methods_set, 'Location', 'best');
-ylabel('Max scalloping loss difference [dB]');
-xlabel('Scatterer point radius [mm]');
+% grid on;
+legend(mainP.methods_set, 'Location', 'West', 'FontSize', 14);
+ylabel('Max scalloping loss difference [dB]', 'FontSize', 14);
+xlabel('Scatterer point radius [mm]', 'FontSize', 14);
 if mainP.save_plots
     prefix = mainP.files_prefix;
     mainP.files_prefix = strcat('scallop_vs_range_diff_', mainP.files_prefix);
