@@ -52,9 +52,10 @@ fprintf('\nNSaving speed  data  into: %s\n', mainP.outputFileName('mat'))
 save(mainP.outputFileName('mat'), 'mainP', 'pts_3dB_width', 'speeds', '-v7.3')
 
 %% Plots
-linestyle_list = {'-.','--','-',':','-', '-.','--','-',':','-'};
-markers_list = {'+','x','diamond','o','*', '+','x','diamond','o','*'};
-% colors_list = {'b','r','g','k','m','y'};
+linestyle_list = {'-','-.','--',':'};
+% markers_list = {'+','x','d','o','.','s','^','>','v','<'};
+markers_list = {'s','d','^','x'};
+colors_list = {'b','r','g','k','m','c'};
 
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
@@ -85,10 +86,6 @@ end
 close
 
 %%
-linestyle_list = {'-.','--','-',':','-', '-.','--','-',':','-'};
-markers_list = {'+','x','diamond','o','*', '+','x','diamond','o','*'};
-% colors_list = {'b','r','g','k','m','y'};
-
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
 else

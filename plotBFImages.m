@@ -1,6 +1,9 @@
-function [] = plotBFImages( mainP, data_DA, data_BF )
-%PLOTBFIMAGES Summary of this function goes here
-%   Detailed explanation goes here
+function [] = plotBFImages( mainP, data_DA, data_BF, display_beams )
+%PLOTBFIMAGES
+if nargin < 4
+    display_beams = false;
+end
+
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
 else
@@ -30,7 +33,6 @@ for m=1:length(mainP.methods_set)
 %         maxim = -50;
         color_range = [maxim-50, maxim];
         
-        display_beams = false;
         if display_beams
 %             maxim = maxim+100;
             for t=1:length(mainP.P.Tx.Theta)

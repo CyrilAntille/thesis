@@ -80,27 +80,29 @@ for p=1:length(mainP.pts_range)
     end
     [~, pangle_idx] = min(abs(pangle - pts_center(p)));
     [~, pt_idx] = min(abs(pts_center - pangle(pangle_idx)));
-    if ~mainP.shift_per_beam || (pts_center(p) - pangle(pangle_idx) < 25*1e-3 && (pt_idx == p))
+    if ~mainP.shift_per_beam || (pts_center(p) - pangle(pangle_idx) < 35*1e-3 && (pt_idx == p))
         if pangle(pangle_idx) - pts_center(p) < 0 && pangle_idx < length(pangle)
             % -> compare with next index
             [~, pt_idx] = min(abs(pts_center - pangle(pangle_idx+1)));
             if pdb(pangle_idx+1) > pdb(pangle_idx) && pt_idx == p && ...
-                    pts_center(p) - pangle(pangle_idx + 1) < 25*1e-3
+                    pts_center(p) - pangle(pangle_idx + 1) < 35*1e-3
                 pangle_idx = pangle_idx + 1; % 25*1e-3 rad = atan(1/40 mm)
             end
         elseif pangle(pangle_idx) - pts_center(p) >= 0 && pangle_idx > 1
             % -> compare with previous index
             [~, pt_idx] = min(abs(pts_center - pangle(pangle_idx-1)));
             if pdb(pangle_idx-1) > pdb(pangle_idx) && pt_idx == p && ...
-                   pts_center(p) - pangle(pangle_idx - 1) < 25*1e-3
+                   pts_center(p) - pangle(pangle_idx - 1) < 35*1e-3
                 pangle_idx = pangle_idx - 1;
             end
         end
         scat_p.peak = [pangle(pangle_idx); pdb(pangle_idx)]; % [angle, ampl]
         % Peak 3dB width
         p_3dbline = ones([1 size(scat_p.beam_trajectory,2)]).*(scat_p.peak(2) - 3);
+        warning('off')
         [p_cross, ~, ~, ~] = intersections(scat_p.beam_trajectory(1,:), ...
             scat_p.beam_trajectory(3,:), scat_p.beam_trajectory(1,:), p_3dbline, 1);
+        warning('on')
         if length(p_cross) >= 2
             crossidx = find(p_cross >= scat_p.peak(1), 1);
             if crossidx >= 2

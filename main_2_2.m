@@ -24,9 +24,10 @@ main_init
 % plotBFImages(mainP, data_DA, data_BF)
 
 %% Plots
-linestyle_list = {'-.','--','-',':'};
-markers_list = {'+','x','diamond','o'};
-colors_list = {'b','r','g','k','m','y'};
+linestyle_list = {'-','-.','--',':'};
+% markers_list = {'+','x','d','o','.','s','^','>','v','<'};
+markers_list = {'s','d','^','x'};
+colors_list = {'b','r','g','k','m','c'};
 
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
