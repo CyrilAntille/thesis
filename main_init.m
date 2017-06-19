@@ -93,7 +93,19 @@ if ~exist('data_DA', 'var')
             Ps = mainP.P;
         end
         % DA(S)
-        data_DA{s} = BeamformAll(Ps, s_raw);
+        s_DA = BeamformAll(Ps, s_raw);
+        if mainP.P.Rx.NoMLA > 1
+            nm = floor(mainP.P.Rx.NoMLA/2);
+            nm_even = mod(mainP.P.Rx.NoMLA + 1, 2);% = 1 if NoMLA is even
+            if ~mainP.shift_per_beam
+                s_DA.image = s_DA.image(1+nm-nm_even:end-nm, :, :);
+            elseif s == 1
+                s_DA.image = s_DA.image(1+nm-nm_even:end, :, :);
+            elseif s == mainP.shift.num_shifts
+                s_DA.image = s_DA.image(1:end-nm, :, :);
+            end
+        end
+        data_DA{s} = s_DA;
         fprintf('\b|\n');
     end
     if mainP.shift_per_beam

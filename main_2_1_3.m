@@ -63,6 +63,7 @@ markers_list = {'s','d','^','x'};
 colors_list = {'b','r','g','k','m','c'};
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+    set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 20*0.8 20*0.4])
 else
     figure;
 end
@@ -93,6 +94,7 @@ for p=1:length(mainP.pts_range)
     if length(num_beams) > 1
         xlim([num_beams(1) num_beams(end)]) 
     end
+%     ylim([0, 5])
     if mainP.save_plots
         mainP.files_prefix = strcat('loss_beams_p', ...
             int2str(mainP.pts_range(p)), '_');
@@ -108,6 +110,7 @@ close
 %% Plots fit
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+    set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 20*0.8 20*0.4])
 else
     figure;
 end

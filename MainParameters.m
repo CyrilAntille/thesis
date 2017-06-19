@@ -78,14 +78,27 @@ classdef MainParameters
             P.Tx.NTheta = NTheta;
             P.Tx.SinTheta = linspace(-P.Tx.SinThMax,P.Tx.SinThMax,P.Tx.NTheta);
             P.Tx.Theta = asin(P.Tx.SinTheta);
-            P.Rx.NoMLA    = NoMLA;
+            P.Rx.NoMLA = NoMLA;
             P.Rx.DeltaSinTh = 0;
             nm = floor(P.Rx.NoMLA/2);
-            diffSinTh = (P.Tx.SinTheta(2) - P.Tx.SinTheta(1)) / (nm+1);
+%             diffSinTh = (P.Tx.SinTheta(2) - P.Tx.SinTheta(1)) / (nm+2);
+            diffSinTh = (P.Tx.SinTheta(2) - P.Tx.SinTheta(1)) / P.Rx.NoMLA;
             for n=1:nm
-                P.Rx.DeltaSinTh = horzcat(-n*diffSinTh, P.Rx.DeltaSinTh, n*diffSinTh);
+                P.Rx.DeltaSinTh = horzcat(P.Rx.DeltaSinTh, n*diffSinTh);
+                if mod(P.Rx.NoMLA, 2) == 1
+                    P.Rx.DeltaSinTh = horzcat(-n*diffSinTh, P.Rx.DeltaSinTh);
+                end
             end
-            P.Rx.SinTheta = linspace(-P.Tx.SinThMax,P.Tx.SinThMax, P.Rx.NoMLA*P.Tx.NTheta);
+            P.Rx.SinTheta = zeros([1 P.Rx.NoMLA * P.Tx.NTheta]);
+            for tx=1:P.Tx.NTheta
+                for rx=1:P.Rx.NoMLA
+                    P.Rx.SinTheta(P.Rx.NoMLA*(tx-1)+rx) = ...
+                        P.Tx.SinTheta(tx) + P.Rx.DeltaSinTh(rx);
+                end
+            end
+            nm_even = mod(P.Rx.NoMLA + 1, 2);% = 1 if NoMLA is even
+            P.Rx.SinTheta = P.Rx.SinTheta(1+nm-nm_even:end-nm); % to keep within Tx range
+%             P.Rx.SinTheta = linspace(-P.Tx.SinThMax, P.Tx.SinThMax, P.Rx.NoMLA*P.Tx.NTheta);
             P.Rx.Theta = asin(P.Rx.SinTheta);
         end
         function scanGridTheta = getScanGrid(obj, bf_method)

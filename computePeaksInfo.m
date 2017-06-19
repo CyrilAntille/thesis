@@ -49,7 +49,7 @@ for p=1:length(mainP.pts_range)
         s_radius_idx = find(radius >= s_radius - 5 * 1e-4, 1);
         s_radius_end = find(radius >= s_radius + 5 * 1e-4, 1);
         if isempty(s_radius_end)
-            s_radius_end = length(radius);
+            s_radius_end = size(bf_im,1);
         end
         if ~isempty(s_radius_idx)
             scat_p.beam_trajectory = ones(size(scat_p.beam_trajectory)) .* s_radius;
@@ -108,6 +108,9 @@ for p=1:length(mainP.pts_range)
             if crossidx >= 2
                 scat_p.peak_3db = [p_cross(crossidx-1); p_cross(crossidx); ...
                     p_cross(crossidx) - p_cross(crossidx-1)]; % [start, end, angle_range]
+                start_mm = sin(scat_p.peak_3db(1)) .* mainP.pts_range(p);
+                end_mm = sin(scat_p.peak_3db(2)) .* mainP.pts_range(p);
+                scat_p.peak_3db_mm = [start_mm; end_mm; end_mm - start_mm];
             end
         end
     end

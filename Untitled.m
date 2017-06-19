@@ -660,3 +660,33 @@ if mainP.shift.type == ShiftType.RadialVar || ...
 end
 mainP.P = mainP.copyP(mainP.num_beams, mainP.NoMLA);
 mainP = mainP.createOutputDir();
+
+%%
+
+for sub=1:4
+    subplot(2,2,sub);
+    xlim([-0.5, 1.5]); ylim([39.5, 40.5])
+%     set(gca, 'Color', [0, 0, 0])
+end
+set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 20*0.8 20*0.4]);
+% saveas(gcf, '../results/twopoints/plotsxlim/0_1_-0.6.png', 'png');
+figure(1);
+
+%%
+load_folder = '..\results\main_2_1_3\speckle42_ext\2017-06-18_23.12.27\';
+pts_gain = zeros(length(mainP.pts_range), length(mainP.methods_set), ...
+    length(num_beams), true_shift.num_shifts);
+for b=1:length(num_beams)
+    for shpos=1:true_shift.num_shifts
+        file_name = strcat(load_folder, 'datapeaks_', ...
+            int2str(num_beams(b)), '_', int2str(shpos), '.mat');
+        load(file_name)
+        for m=1:length(mainP.methods_set)
+            if isfield(data_peaks{m}{1}, 'peak')
+                pts_gain(1, m, b, shpos) = data_peaks{m}{1}.peak(2);
+            else
+                pts_gain(1, m, b, shpos) = -1000;
+            end
+        end
+    end
+end

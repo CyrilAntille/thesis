@@ -3,7 +3,7 @@
 % clearvars -except mainP
 if ~exist('mainP', 'var')
     mainP = MainParameters();
-    mainP.num_beams = 981;
+    mainP.num_beams = 95;
     mainP.pts_range = [40];
     mainP.pts_azimuth = [0];
 %     mainP.pts_range = [40, 40]; % Add a range (in mm) for each point
@@ -25,13 +25,15 @@ if ~exist('mainP', 'var')
     mainP.save_plots = true;
     mainP = mainP.createOutputDir();
     
-    speeds = -0.6:0.1:0.6; % Unit depends on ShiftType
+%     speeds = -0.6:0.1:0.6; % Unit depends on ShiftType
     % speeds = 0:1/16:0.5; % Unit depends on ShiftType
-    % speeds = [-0.5, 0.5]; % Unit depends on ShiftType
+    speeds = [0.6]; % Unit depends on ShiftType
 end
 
 %%
 pts_3dB_width = zeros([length(mainP.pts_range),...
+    length(mainP.methods_set), length(speeds)]);
+pts_3dB_width_mm = zeros([length(mainP.pts_range),...
     length(mainP.methods_set), length(speeds)]);
 for sp=1:length(speeds)
     fprintf('Stats_2_2: Running main_2_2 with speed value: %0.2f.\n', speeds(sp));
@@ -41,15 +43,18 @@ for sp=1:length(speeds)
         for p=1:length(mainP.pts_range)
             if isfield(data_peaks{m}{p}, 'peak_3db')
                 pts_3dB_width(p,m,sp) = data_peaks{m}{p}.peak_3db(2);
+                pts_3dB_width_mm(p,m,sp) = data_peaks{m}{p}.peak_3db_mm(2);
             end
         end
     end
-%     clearvars -except mainP pts_3dB_width speeds
+    save(strcat(mainP.save_folder, 'datapeaks_', int2str(mainP.num_beams), ...
+        '_', num2str(speeds(sp),2), '.mat'), 'mainP', 'data_peaks', '-v7.3')
     clearvars data_DA data_BF
 end
 mainP.files_prefix = 'speeds_';
 fprintf('\nNSaving speed  data  into: %s\n', mainP.outputFileName('mat'))
-save(mainP.outputFileName('mat'), 'mainP', 'pts_3dB_width', 'speeds', '-v7.3')
+save(mainP.outputFileName('mat'), 'mainP', 'pts_3dB_width', ...
+    'pts_3dB_width_mm', 'speeds', '-v7.3')
 
 %% Plots
 linestyle_list = {'-','-.','--',':'};
@@ -59,6 +64,7 @@ colors_list = {'b','r','g','k','m','c'};
 
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+    set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 20*0.8 20*0.4])
 else
     figure;
 end
@@ -88,12 +94,14 @@ close
 %%
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+    set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 20*0.8 20*0.4])
 else
     figure;
 end
 
 for p=1:size(pts_3dB_width, 1)
-    mainlobe_mm = sin(squeeze(pts_3dB_width(p,:,:))') .* mainP.pts_range(1);
+%     mainlobe_mm = sin(squeeze(pts_3dB_width(p,:,:))') .* mainP.pts_range(1);
+    mainlobe_mm = squeeze(pts_3dB_width_mm(p,:,:))';
     p1 = plot(speeds, mainlobe_mm, 'LineWidth', 3, 'MarkerSize', 8);
     for pidx=1:length(p1)
         p1(pidx).Marker = markers_list{pidx};
@@ -117,6 +125,7 @@ close
 %%
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+    set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 20*0.8 20*0.4])
 else
     figure;
 end
@@ -125,12 +134,13 @@ if isempty(zero_idx)
     zero_idx = 1;
 end
 for p=1:size(pts_3dB_width, 1)
-    pwidths = squeeze(pts_3dB_width(p,:,:))';
+%     pwidths = squeeze(pts_3dB_width(p,:,:))';
+    pwidths = squeeze(pts_3dB_width_mm(p,:,:))';
     for w=1:size(pwidths,2)
         pwidths(:,w) = pwidths(:,w) / pwidths(zero_idx,w);
     end
     pwidths = pwidths * 100 - 100;
-    p1 = plot(speeds, pwidths, 'LineWidth', 2);
+    p1 = plot(speeds, pwidths, 'LineWidth', 3, 'MarkerSize', 8);
     for pidx=1:length(p1)
         p1(pidx).Marker = markers_list{pidx};
         p1(pidx).LineStyle = linestyle_list{pidx};

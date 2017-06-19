@@ -1,24 +1,16 @@
 %% 2.1: Motion between frames - loss vs shift
-mainP = MainParameters();
-mainP.num_beams = 11;
-mainP.pts_range = [40, 55];
-% dist_b = 0.3 * mainP.pts_range ./ floor(mainP.num_beams/2);
-% mainP.pts_azimuth = dist_b .* 0.5;
-mainP.pts_azimuth = [0, 0];
-mainP.NoMLA = 1;
-mainP.shift = Shift(ShiftType.RadialVar, 1/8, 17, 0, 1); % Ref Shift.m
-mainP.shift_per_beam = false;
-% mainP.methods_set = {'DAS', 'IAA-MBMB', 'IAA-MBMB-2', 'IAA-MBMB-4'};
-mainP.save_plots = true;
-mainP.speckle_load = false;
-mainP.speckle_file = '..\data\2_1_speckle_2_10-6.mat';
-
-if mainP.shift.type == ShiftType.RadialVar || ...
-        mainP.shift.type == ShiftType.RadialCst
-    % This allows to set mainP.pts_range above as radius instead.
-    % This step transforms radiuses to ranges.
-    mainP.pts_range = mainP.pts_range.*...
-        cos(sin(mainP.pts_azimuth./mainP.pts_range));
+if ~exist('mainP', 'var')
+    mainP = MainParameters();
+    mainP.num_beams = 11;
+    mainP.pts_range = [40, 55];
+    mainP.pts_azimuth = [0, 0];
+    mainP.NoMLA = 1;
+    mainP.shift = Shift(ShiftType.RadialVar, 1/8, 17, 0, 1); % Ref Shift.m
+    mainP.shift_per_beam = false;
+    % mainP.methods_set = {'DAS', 'IAA-MBMB', 'IAA-MBMB-2', 'IAA-MBMB-4'};
+    mainP.save_plots = true;
+    mainP.speckle_load = false;
+    mainP.speckle_file = '..\data\2_1_speckle_2_10-6.mat';
 end
 mainP.P = mainP.copyP(mainP.num_beams, mainP.NoMLA);
 mainP = mainP.createOutputDir();
@@ -30,7 +22,11 @@ main_init
 for s=1:mainP.shift.num_shifts
     for m=1:length(mainP.methods_set)
         for p=1:length(mainP.pts_range)
-            pts_gain(p, m, s) = data_peaks{m}{s}{p}.peak(2);
+            if isfield(data_peaks{m}{1}, 'peak')
+                pts_gain(p, m, s) = data_peaks{m}{s}{p}.peak(2);
+            else
+                pts_gain(p, m, s) = -1000;
+            end
         end
     end
 end
@@ -82,6 +78,7 @@ markers_list = {'s','d','+','^'};
 colors_list = {'b','r','g','k','m','c'};
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+    set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 20*0.8 20*0.4])
 else
     figure;
 end

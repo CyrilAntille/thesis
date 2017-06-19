@@ -60,7 +60,7 @@ for m=1:length(mainP.methods_set)
     imagesc(Xs, Zs, img)
     if mainP.normalize_bfim && (mainP.speckle_create || mainP.speckle_load)
         caxis([-25  25]);
-    else
+    elseif isfinite(max(img(:)))
         caxis([max(img(:))-50 max(img(:))]);
     end
     xlim([xmin-1 xmax+1])
@@ -110,16 +110,28 @@ for m=1:length(mainP.methods_set)
     if db_min < Inf && db_max > -Inf
         ylim([db_min-3 db_max])
     end
+    
+    if false % display transmit beams
+        beams_az = mainP.P.Tx.SinTheta .* mainP.pts_range(1);
+        [xmin, xmax] = xlim;
+        for az=1:length(beams_az)
+            baz = beams_az(az);
+            if baz > xmax
+                break
+            end
+            if baz < xmin && baz > xmax
+                continue
+            end
+            line('XData', [baz, baz], 'YData', ylim, 'LineWidth', 2, ...
+                'LineStyle', '-', 'Color', 'm');
+        end
+        pl_legend{end+1} = 'Transmitted beams';
+    end
+    
 %     xlabel('angle [deg]');
     xlabel('azimuth [mm]');
     ylabel('gain [dB]');
     legend(pl_legend, 'Location', 'south');
-%     for t=1:length(mainP.P.Tx.Theta)
-%         tx = rad2deg(mainP.P.Tx.Theta(t));
-%         l = line('XData', [tx tx], 'YData', ylim, 'LineWidth', 2, ...
-%             'LineStyle', linestyle_list{end-1}, ...
-%             'Color', colors_list{end-1});
-%     end
     hold off;
 
     if mainP.save_plots
@@ -149,8 +161,6 @@ for m=1:length(mainP.methods_set)
 %         radius = linspace(radius(1), radius(end), mainP.interp_upsample);
 %     end
     warning('off')
-%     [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
-%         thetas, 1e3 * radius, length(thetas), length(radius), 'spline'); % Test
     [img, Xs, Zs] = getScanConvertedImage(m_BF, ...
         thetas, 1e3 * radius, 2024, 2024, 'spline');
     warning('on')
@@ -190,8 +200,17 @@ for m=1:length(mainP.methods_set)
         end
     end
     pad = 0.5; % padding in mm
-    az_lim = [max(Xs(1), az_lim(1) - pad), min(Xs(end), az_lim(2) + pad)];
-    r_lim = [max(Zs(1), r_lim(1) - pad), min(Zs(end), r_lim(2) + pad)];
+%     az_lim = [max(Xs(1), az_lim(1) - pad), min(Xs(end), az_lim(2) + pad)];
+%     if length(mainP.pts_range) == 1
+%         az_lim = [-0.5, 0.5];
+%     else
+%         az_lim = [-0.5, 2];
+%     end
+%     r_lim = [max(Zs(1), r_lim(1) - pad), min(Zs(end), r_lim(2) + pad)];
+
+    az_lim = [-0.5, 1.5];
+    r_lim = [39.5, 40.5];
+    
     minXs = find(Xs >= az_lim(1), 1);
     maxXs = find(Xs >= az_lim(2), 1);
     pXs = Xs(minXs:maxXs);
@@ -200,18 +219,15 @@ for m=1:length(mainP.methods_set)
     pZs = Zs(minZs:maxZs);
     p_img = img(minZs:maxZs, minXs:maxXs);
     p_img(~isfinite(p_img)) = -1000; % contourf doesn't handle non-finite values
-%     [xGrid, zGrid] = meshgrid(linspace(pXs(1), pXs(end), 2024), ...
-%         linspace(pZs(1), pZs(end), 2024));
     [xGrid, zGrid] = meshgrid(linspace(pXs(1), pXs(end), max([500, length(pXs)])), ...
         linspace(pZs(1), pZs(end), length(pZs)));
 	p_img = interp2(pXs, pZs, p_img, xGrid, zGrid, 'spline', 0);
     subplot(2,ceil(length(mainP.methods_set)/2),m);
-%     contourf(pXs, pZs, p_img, [-1000, max_gain-10, max_gain + 3], 'ShowText','on');
-    contourf(xGrid, zGrid, p_img, [max_gain-100, max_gain-10, max_gain-3, max_gain + 3]) %, 'ShowText','on');
+    contourf(xGrid, zGrid, p_img, [max_gain-100, max_gain-10, max_gain-3, max_gain + 3])
     colormap gray
     set(gca,'YDir','Reverse')
-    xlabel('azimuth [mm]');
-    ylabel('range [mm]');
+    xlabel('azimuth [mm]', 'FontSize', 14);
+    ylabel('range [mm]', 'FontSize', 14);
     title(mainP.methods_set{m});
 end
 if mainP.save_plots

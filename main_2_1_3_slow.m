@@ -1,11 +1,11 @@
 %% 2.1: Motion between frames
 if ~exist('mainP', 'var')
-    num_beams=181:100:981;
+    num_beams=11:10:191;
     mainP = MainParameters();
     mainP.shift_per_beam = true;
     mainP.shift = Shift(ShiftType.RadialVar, 0, 1, 0, 1);
     mainP.medium_range = [35, 45]; % mm
-    mainP.methods_set = {'MV'};
+    mainP.methods_set = {'DAS', 'IAA-MBMB', 'IAA-MBMB-2', 'IAA-MBMB-4'};
     mainP.save_plots = true;
     mainP.speckle_load = false;
     mainP.speckle_file = '..\data\2_1_speckle_2_10-6.mat';
@@ -15,9 +15,9 @@ mainP.P = mainP.copyP(mainP.num_beams, mainP.NoMLA);
 mainP = mainP.createOutputDir();
 
 %%
+true_shift = Shift(ShiftType.RadialVar, 1/4, 4, 0, 1);
 pts_gain = zeros(length(mainP.pts_range), length(mainP.methods_set), ...
-    length(num_beams), mainP.shift.num_shifts);
-true_shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1);
+    length(num_beams), true_shift.num_shifts);
 init_pos = [0, 40]; % [azimuth, range] mm
 fprintf('\n-------------------------------------------- START ----------------------------------------------------------------')
 for b=1:length(num_beams)
@@ -59,6 +59,7 @@ markers_list = {'s','d','^','x'};
 colors_list = {'b','r','g','k','m','c'};
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+    set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 20*0.8 20*0.4])
 else
     figure;
 end
