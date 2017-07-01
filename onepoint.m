@@ -10,15 +10,19 @@ mainP.save_plots = true;
 mainP = mainP.createOutputDir();
 
 origin_folder = mainP.save_folder;
-speckle = {'', '..\data\2_1_speckle_2_10-6.mat', ...
-    '..\data\2_1_speckle_42_10-6.mat'};
+speckle = {''};
+% '..\data\2_1_speckle_2_10-6.mat', '..\data\2_1_speckle_42_10-6.mat'};
 
 %% 2.1.1 Single point moving, 65 beams
-speeds = -0.6:0.1:0.6;
+% speeds = -0.6:0.1:0.6;
+% mainP.num_beams = 65;
+speeds = [-0.6:0.1:0.6];
+% speeds = [0:0.375:3.75] ./ 3;
 mainP.num_beams = 65;
+mainP.NoMLA = 1;
 mainP.methods_set = {'DAS', 'MV', 'IAA-MBSB', 'IAA-MBMB'};
-mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams, 0, 1);
-mainP.P = mainP.copyP(mainP.num_beams);
+mainP.shift = Shift(ShiftType.LinearSpeed, 0, mainP.num_beams/3, 0, 3);
+mainP.P = mainP.copyP(mainP.num_beams, mainP.NoMLA);
 for spkl=1:length(speckle)
     mainP.speckle_file = speckle{spkl};
     if strcmp(mainP.speckle_file, '')

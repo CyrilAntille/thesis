@@ -1,4 +1,4 @@
-function [ bf_im ] = normalizeBFImage( mainP, bf_im, radius, phantom )
+function [ bf_im ] = normalizeBFImage( mainP, bf_im, radius, phantom, bf_method )
 %normalizeBFImage Normalizes and/or upsamples BF images
 %   Detailed explanation goes here
 thetas = mainP.P.Tx.Theta;
@@ -14,7 +14,7 @@ if mainP.interp_upsample > 0
     warning('on')
 end
 if mainP.normalize_bfim
-    scatterer_points = computePeaksInfo(mainP, phantom, radius, bf_im);
+    scatterer_points = computePeaksInfo(mainP, phantom, radius, bf_im, bf_method);
     % background = anything outside beam_trajectory (+/- buffer)
     traj_buffer = 0.5 * 1e-3; % m
     bgd_mask = ones(size(bf_im));

@@ -67,4 +67,3 @@ for m=1:length(methods_set)
     end
 end
 hold off; legend(methods_set); pause; close;
-

@@ -5,16 +5,17 @@ if ~exist('mainP', 'var')
     mainP = MainParameters();
     mainP.pts_range = [40];
     mainP.pts_azimuth = [0];
-    mainP.shift = Shift(ShiftType.RadialVar, 1/2, 4, 0, 1); % Ref Shift.m
+    mainP.shift = Shift(ShiftType.RadialVar, 1/2, 2, 0, 1); % Ref Shift.m
     mainP.shift_per_beam = false;
 %     mainP.shift = Shift(ShiftType.RadialVar, 1/8, 8, 0, 1); % Ref Shift.m
 %     mainP.methods_set = {'DAS', 'IAA-MBMB', 'IAA-MBMB-2', 'IAA-MBMB-4'};
     mainP.save_plots = true;
     mainP.speckle_load = false;
     mainP.speckle_file = '..\data\2_1_speckle_2_10-6.mat';
-    mainP.NoMLA = 1;
+    mainP.NoMLA = 3;
+    num_beams=5:4:65;
 %     num_beams=11:10:181;
-    num_beams=181:100:981;
+%     num_beams=181:100:981;
 
     if mainP.shift.type == ShiftType.RadialVar || ...
             mainP.shift.type == ShiftType.RadialCst
@@ -33,7 +34,7 @@ pts_gain = zeros(length(mainP.pts_range), length(mainP.methods_set), ...
 for b=1:length(num_beams)
     mainP.num_beams = num_beams(b);
     fprintf('Main_2_1_3: Beams number: %d\n', num_beams(b));
-    mainP.P = mainP.copyP(mainP.num_beams);
+    mainP.P = mainP.copyP(mainP.num_beams, mainP.NoMLA);
     main_init
     for s=1:mainP.shift.num_shifts
         for m=1:length(mainP.methods_set)
@@ -77,11 +78,11 @@ for p=1:length(mainP.pts_range)
                 min(pts_gain(p, m, b, :));
         end
     end
-    line('XData', [num_beams(1) num_beams(end)], 'YData', [1 1], ...
-        'LineWidth', 3, 'LineStyle', linestyle_list{1}, ...
+    line('XData', [num_beams(1).*mainP.NoMLA num_beams(end).*mainP.NoMLA], ...
+        'YData', [1 1], 'LineWidth', 3, 'LineStyle', linestyle_list{1}, ...
         'Color', colors_list{end});
     hold on;
-    pl = plot(num_beams, scallop_loss', 'LineWidth', 3, 'MarkerSize', 8);
+    pl = plot(num_beams .* mainP.NoMLA, scallop_loss', 'LineWidth', 3, 'MarkerSize', 8);
     for pidx=1:length(pl)
         pl(pidx).Marker = markers_list{pidx};
         pl(pidx).LineStyle = linestyle_list{pidx};
@@ -90,9 +91,9 @@ for p=1:length(mainP.pts_range)
     hold off;
     legend(['1dB threshold', mainP.methods_set], 'Location', 'NE', 'FontSize', 14);
     ylabel('Max scalloping loss [dB]', 'FontSize', 14);
-    xlabel('Number of transmitted beams', 'FontSize', 14);
+    xlabel('Number of receive beams', 'FontSize', 14);
     if length(num_beams) > 1
-        xlim([num_beams(1) num_beams(end)]) 
+        xlim([num_beams(1).*mainP.NoMLA num_beams(end).*mainP.NoMLA]) 
     end
 %     ylim([0, 5])
     if mainP.save_plots
@@ -173,7 +174,7 @@ for p=1:length(mainP.pts_range)
     hold off;
     legend([mainP.methods_set '1dB threshold'], 'Location', 'best');
     ylabel('Max scalloping loss [dB]');
-    xlabel('Number of transmitted beams');
+    xlabel('Number of receive beams');
     if mainP.save_plots
         mainP.files_prefix = strcat('loss_beams_fit_p', ...
             int2str(mainP.pts_range(p)), '_');

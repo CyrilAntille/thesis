@@ -68,7 +68,7 @@ for pidx=1:length(pl)
 end
 % grid on;
 legend(mainP.methods_set, 'Location', 'SW', 'FontSize', 14);
-ylabel('Max scalloping loss difference [dB]', 'FontSize', 14);
+ylabel('Max scalloping loss [dB]', 'FontSize', 14);
 xlabel('Scatterer point radius [mm]', 'FontSize', 14);
 if mainP.save_plots
     prefix = mainP.files_prefix;

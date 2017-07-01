@@ -690,3 +690,85 @@ for b=1:length(num_beams)
         end
     end
 end
+
+%% Pulse plot
+P = Parameters();
+pulse = conv(conv(P.Tx.Excitation, P.Tx.ImpulseResp), P.Rx.ImpulseResp);
+pulse = pulse ./ max(pulse);
+xvals = [1:length(pulse)] ./ P.fs * 10^6;
+
+figure; plot(xvals, pulse, 'LineWidth', 3);
+xlim([xvals(1), xvals(end)]); ylim([min(pulse), max(pulse)]);
+xlabel('Time [\mus]', 'FontSize', 14);
+ylabel('Normalized magnitude', 'FontSize', 14);
+set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 20*0.8 20*0.4]);
+
+%%
+file_suffix = {'0_-06', '0_06', '-45_-06', '-45_06', ...
+    '45_-06', '45_06', '90_-06', '90_06'};
+for f=1:8
+    figure(f);
+    set(gcf, 'Units', 'normalized', 'Position', [.2 .3 .5 .3]);
+    set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 20*0.8 20*0.4]);
+    for sub=1:4
+        subplot(2,2,sub)
+        set(gca, 'YTick', [39.5, 40, 40.5], 'YLim', [39.5, 40.5], ...
+            'XLim', [-0.5, 0.5], 'XTick', [-0.5:0.25:0.5], ...
+            'Color', [0, 0, 0])
+    end
+%     file_name = strcat('../motion/motion_', int2str(f), '.png');
+    file_name = strcat('../motion/motion_', file_suffix{f});
+    saveas(gcf, strcat(file_name, '.png'), 'png')
+    saveas(gcf, strcat(file_name, '.fig'), 'fig')
+end
+% close all
+%%
+file_name = {'../DAS_steered1', '../DAS_steered2', '../DAS_steered3'};
+for f=1:3
+    figure(f);
+    subplot(1,2,1); xlim([-1, 1])
+%     set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 25*0.8 25*0.3])
+    set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 30*0.8 30*0.25], ...
+        'units','normalized','position',[.2 .3 .5 .3])
+    saveas(gcf, strcat(file_name{f}, '.png'), 'png')
+    saveas(gcf, strcat(file_name{f}, '.fig'), 'fig')
+end
+    
+%%
+file_name = {'../DAS_frame1', '../DAS_frame2', '../DAS_frame3'};
+for f=1:3
+    figure(f);
+    set(gca, 'FontSize', 18, 'Xlim', [-0.5, 0.5], 'XTick', [-0.5:0.25:0.5], ...
+        'Ylim', [39.5, 40.5], 'YTick', [39.5:0.25:40.5])
+    title(''); xlabel('azimuth [mm]', 'FontSize', 26);
+    ylabel('range [mm]', 'FontSize', 26);
+%     set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 25*0.8 25*0.3])
+    saveas(gcf, strcat(file_name{f}, '.png'), 'png')
+    saveas(gcf, strcat(file_name{f}, '.fig'), 'fig')
+end
+   
+%%
+clear all
+mainP = MainParameters();
+% mainP.methods_set = {'DAS', 'IAA-MBMB', 'IAA-MBMB-2', 'IAA-MBMB-4'};
+mainP.medium_range = [35, 45];
+mainP.speckle_load = true;
+
+rx_up = 1;
+mainP.num_beams = 11*rx_up;
+mainP.P = mainP.copyP(mainP.num_beams);
+mainP.shift_per_beam = true;
+mainP.shift = Shift(ShiftType.LinearSpeed, 0,  mainP.num_beams, 0, 1);
+% mainP.shift_per_beam = false;
+% mainP.shift = Shift(ShiftType.LinearSpeed, 0,  1, 0, 1);
+
+origin_folder = mainP.save_folder;
+if ~exist('speckle', 'var')
+    speckle = {''}; %, '..\data\2_1_speckle_2_10-6.mat', '..\data\2_1_speckle_42_10-6.mat'};
+end
+mainP.pts_range = [40];
+distb = mainP.pts_range(1) .* (0.3 / floor(mainP.num_beams/rx_up/2));
+mainP.pts_azimuth = [0];
+
+mainP.save_plots = true;
+mainP = mainP.createOutputDir();

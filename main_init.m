@@ -174,7 +174,7 @@ if true
             if mainP.norm_variant == 2 && m > 1
                 mainP.normalize_bfim = false;
                 m_BF = normalizeBFImage(mainP, data_BF{m}, ...
-                    data_DA.Radius, data_phantom);
+                    data_DA.Radius, data_phantom, mainP.methods_set{m});
                 if norm_info(3)
                     m_BF = m_BF .* norm_info(2);
 %                     m_BF = m_BF - norm_info(2); % dB
@@ -182,7 +182,7 @@ if true
                 mainP.normalize_bfim = norm_info(3);
             else
                 m_BF = normalizeBFImage(mainP, data_BF{m}, ...
-                    data_DA.Radius, data_phantom);
+                    data_DA.Radius, data_phantom, mainP.methods_set{m});
                 norm_info(2) = max(m_BF(:)) / norm_info(1);
 %                 norm_info(2) = max(m_BF(:)) - norm_info(1); % dB
             end
@@ -203,7 +203,7 @@ if true
                 if s > 1 && (mainP.norm_variant == 2 || mainP.norm_variant == 3)
                     mainP.normalize_bfim = false;
                     s_BF = normalizeBFImage(mainP, s_BF, ...
-                        data_DA{s}.Radius, data_phantom{s});
+                        data_DA{s}.Radius, data_phantom{s}, mainP.methods_set{m});
                     if norm_info(3)
                         s_BF = s_BF .* norm_info(2);
 %                         s_BF = s_BF - norm_info(2); % dB
@@ -211,7 +211,7 @@ if true
                     mainP.normalize_bfim = norm_info(3);
                 else
                     s_BF = normalizeBFImage(mainP, s_BF, ...
-                        data_DA{s}.Radius, data_phantom{s});
+                        data_DA{s}.Radius, data_phantom{s}, mainP.methods_set{m});
                     norm_info(2) = max(s_BF(:)) / norm_info(1);
 %                     norm_info(2) = max(s_BF(:)) - norm_info(1); % dB
                 end

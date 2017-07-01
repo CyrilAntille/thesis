@@ -2,7 +2,7 @@
 % clear all
 if ~exist('mainP', 'var')
     mainP = MainParameters();
-    mainP.num_beams = 11;
+    mainP.num_beams = 65;
     mainP.NoMLA = 1;
     mainP.pts_range = [40, 40];
     distb = mainP.pts_range(1) .* (0.3 / floor(mainP.num_beams/2));
@@ -31,6 +31,8 @@ colors_list = {'b','r','g','k','m','c'};
 
 if mainP.save_plots
     figure('units','normalized','position',[.2 .3 .5 .3],'Visible','off')
+%     set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 20*0.8 20*0.4])
+    set(gcf, 'PaperUnits', 'centimeters', 'PaperPosition', [0 0 30*0.8 30*0.3])
 else
     figure;
 end
@@ -55,8 +57,9 @@ for m=1:length(mainP.methods_set)
         xmin = min(xmin, pxmin); xmax = max(xmax, pxmax);
         ymin = min(ymin, pymin); ymax = max(ymax, pymax);
     end
-
-    clf(); subplot(1,2,1)
+    
+    clf(); 
+    subplot(1,2,1)
     imagesc(Xs, Zs, img)
     if mainP.normalize_bfim && (mainP.speckle_create || mainP.speckle_load)
         caxis([-25  25]);
@@ -65,13 +68,25 @@ for m=1:length(mainP.methods_set)
     end
     xlim([xmin-1 xmax+1])
     ylim([ymin-1 ymax+1])
-    colorbar
+%     colorbar
     colormap(gray)
-    xlabel('azimuth [mm]');
-    ylabel('range [mm]');
-    title(['Method :', mainP.methods_set{m}])
+    xlabel('azimuth [mm]', 'FontSize', 14);
+    ylabel('range [mm]', 'FontSize', 14);
+%     title(['Method :', mainP.methods_set{m}])
 
-    subplot(1,2,2); hold on
+    % TEST
+    if length(mainP.pts_range) == 1
+        az_lim = [-1, 1];
+    else
+        az_lim = [-1, 2];
+    end
+%     xlim(az_lim);
+    xlim([-1, 3])
+%     ylim([39.5, 40.5]);
+    ylim([39, 41]);
+    %
+    subplot(1,2,2);
+    hold on
     img = db(abs(m_BF));
     pl_legend = {};
     angle_min = Inf; angle_max = -Inf; db_min = Inf; db_max = -Inf;
@@ -83,8 +98,9 @@ for m=1:length(mainP.methods_set)
             x_mm = sin(pbtraj(1,:)) .* mainP.pts_range(p);
             plot(x_mm, pbtraj(3,:), colors_list{p}, 'LineWidth', 2, ...
                 'LineStyle', linestyle_list{p}, 'Marker', markers_list{p});
-            p_title = ['Steered response at ', ...
-                num2str(mainP.pts_range(p), 2), ' mm range'];
+%             p_title = ['Steered response at ', ...
+%                 num2str(mainP.pts_range(p), 2), ' mm range'];
+            p_title = 'Steered response';
             pl_legend{end+1} = p_title;
         end
         if isfield(pdata, 'peak') && isfield(pdata, 'peak_3db')
@@ -95,8 +111,8 @@ for m=1:length(mainP.methods_set)
                 'LineWidth', 2, 'LineStyle', '-', 'Color', [0,0,0]+0.4)
 %             p_l = strcat('P', int2str(p), '-3dB width= ', ...
 %                 num2str(p_x(2) - p_x(1), 3), ' [deg]');
-            p_l = strcat('P', int2str(p), '-3dB width= ', ...
-                num2str(p_x(2) - p_x(1), 3), ' [mm]');
+            p_l = ['s_', int2str(p), ' width= ', ...
+                num2str(p_x(2) - p_x(1), 3), ' mm'];
             pl_legend{end+1} = p_l;
             angle_min = min([angle_min, p_x(1)]);
             angle_max = max([angle_max, p_x(2)]);
@@ -108,7 +124,8 @@ for m=1:length(mainP.methods_set)
         xlim([angle_min-0.5, angle_max+0.5])
     end
     if db_min < Inf && db_max > -Inf
-        ylim([db_min-3 db_max])
+%         ylim([db_min-3 db_max])
+        ylim([db_min-4 db_max])
     end
     
     if false % display transmit beams
@@ -129,10 +146,13 @@ for m=1:length(mainP.methods_set)
     end
     
 %     xlabel('angle [deg]');
-    xlabel('azimuth [mm]');
-    ylabel('gain [dB]');
-    legend(pl_legend, 'Location', 'south');
+    xlabel('azimuth [mm]', 'FontSize', 14);
+    ylabel('gain [dB]', 'FontSize', 14);
+    legend(pl_legend, 'Location', 'south', 'FontSize', 14);
     hold off;
+    % TEST
+%     xlim([-0.5, 2]);
+    %
 
     if mainP.save_plots
         mainP.files_prefix = strcat(mainP.methods_set{m}, '_');
@@ -201,34 +221,41 @@ for m=1:length(mainP.methods_set)
     end
     pad = 0.5; % padding in mm
 %     az_lim = [max(Xs(1), az_lim(1) - pad), min(Xs(end), az_lim(2) + pad)];
+%     r_lim = [max(Zs(1), r_lim(1) - pad), min(Zs(end), r_lim(2) + pad)];
+
 %     if length(mainP.pts_range) == 1
 %         az_lim = [-0.5, 0.5];
 %     else
-%         az_lim = [-0.5, 2];
+%         az_lim = [-0.5, 1.5];
 %     end
-%     r_lim = [max(Zs(1), r_lim(1) - pad), min(Zs(end), r_lim(2) + pad)];
-
-    az_lim = [-0.5, 1.5];
-    r_lim = [39.5, 40.5];
+    az_lim = [-1, 3];
+%     r_lim = [39.5, 40.5];
+    r_lim = [mainP.pts_range(1) - 0.5, mainP.pts_range(1) + 0.5];
     
-    minXs = find(Xs >= az_lim(1), 1);
-    maxXs = find(Xs >= az_lim(2), 1);
+    minXs = find(Xs >= az_lim(1), 1) - 1;
+    maxXs = find(Xs >= az_lim(2), 1) + 1;
     pXs = Xs(minXs:maxXs);
-    minZs = find(Zs >= r_lim(1), 1);
-    maxZs = find(Zs >= r_lim(end), 1);
+    minZs = find(Zs >= r_lim(1), 1) - 1;
+    maxZs = find(Zs >= r_lim(end), 1) + 1;
     pZs = Zs(minZs:maxZs);
     p_img = img(minZs:maxZs, minXs:maxXs);
     p_img(~isfinite(p_img)) = -1000; % contourf doesn't handle non-finite values
     [xGrid, zGrid] = meshgrid(linspace(pXs(1), pXs(end), max([500, length(pXs)])), ...
         linspace(pZs(1), pZs(end), length(pZs)));
 	p_img = interp2(pXs, pZs, p_img, xGrid, zGrid, 'spline', 0);
+    
     subplot(2,ceil(length(mainP.methods_set)/2),m);
     contourf(xGrid, zGrid, p_img, [max_gain-100, max_gain-10, max_gain-3, max_gain + 3])
     colormap gray
-    set(gca,'YDir','Reverse')
-    xlabel('azimuth [mm]', 'FontSize', 14);
-    ylabel('range [mm]', 'FontSize', 14);
-    title(mainP.methods_set{m});
+%     set(gca,'YDir','Reverse', 'FontSize', 18)
+    xlabel('azimuth [mm]', 'FontSize', 18);
+    ylabel('range [mm]', 'FontSize', 18);
+    title(mainP.methods_set{m}, 'FontSize', 24);
+    xlim(az_lim); ylim(r_lim);
+%     set(gca, 'YDir','Reverse', 'FontSize', 18, 'XTick', [-0.5:0.5:1.5], ...
+%         'YTick', [39.5:0.5:40.5])
+    set(gca, 'YDir','Reverse', 'FontSize', 18, 'XTick', [-1:3], ...
+        'YTick', [39.5:0.5:40.5])
 end
 if mainP.save_plots
     saveas(gcf,  mainP.outputFileName('png'), 'png')

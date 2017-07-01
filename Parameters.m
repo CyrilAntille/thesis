@@ -41,7 +41,7 @@ function P = Parameters(NTheta)
 
 
   % Must provide all input-data for this function
-  P.Tx.no_elements = 96;                    % No of physical elements in x
+  P.Tx.no_elements = 96 / 3;                    % No of physical elements in x
   P.Tx.height      = 10e-3;                 % Height of elements
   P.Tx.pitch       = lambda/2;                % Center-to-center distance 
   P.Tx.kerf        = 1e-5;                  % Distance between elements  
@@ -61,7 +61,7 @@ function P = Parameters(NTheta)
   
 
       % Must provide all input-data for this function
-  P.Rx.no_elements = 96;                    % No of physical elements in x
+  P.Rx.no_elements = 96 / 3;                    % No of physical elements in x
   P.Rx.height      = 10e-3;                 % Height of elements
 %   P.Rx.pitch       = P.c/P.fc /2;           % Center-to-center distance 
 %   P.Rx.pitch       = 0.33e-3;                % Center-to-center distance 
